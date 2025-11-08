@@ -1,0 +1,72 @@
+'use client'
+
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { AppLayout } from '@/components/layout/AppLayout'
+import { useAuth } from '@/contexts/AuthContext'
+import { useDashboardKPIs } from '@/hooks/useDashboard'
+import { KPICard } from '@/components/dashboard/KPICard'
+import { SalesTrendChart } from '@/components/dashboard/SalesTrendChart'
+import { LowStockTable } from '@/components/dashboard/LowStockTable'
+import { DollarSign, TrendingUp, ShoppingCart, AlertTriangle } from 'lucide-react'
+
+export default function DashboardPage() {
+  const { user, tenant } = useAuth()
+  const { data: kpis, isLoading } = useDashboardKPIs()
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: tenant?.settings?.currency || 'USD',
+    }).format(amount)
+  }
+
+  return (
+    <ProtectedRoute requireAdmin={true}>
+      <AppLayout>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold">Welcome back, {user?.full_name}</h1>
+            <p className="text-muted-foreground mt-1">
+              Here's what's happening with your business today
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <KPICard
+              title="Total Revenue"
+              value={formatCurrency(kpis?.totalRevenue || 0)}
+              change={kpis?.revenueChange}
+              icon={DollarSign}
+              loading={isLoading}
+            />
+            <KPICard
+              title="Total Profit"
+              value={formatCurrency(kpis?.totalProfit || 0)}
+              change={kpis?.profitChange}
+              icon={TrendingUp}
+              loading={isLoading}
+            />
+            <KPICard
+              title="Total Sales"
+              value={kpis?.totalSales?.toString() || '0'}
+              change={kpis?.salesChange}
+              icon={ShoppingCart}
+              loading={isLoading}
+            />
+            <KPICard
+              title="Low Stock Items"
+              value={kpis?.lowStockCount?.toString() || '0'}
+              icon={AlertTriangle}
+              loading={isLoading}
+            />
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <SalesTrendChart />
+            <LowStockTable />
+          </div>
+        </div>
+      </AppLayout>
+    </ProtectedRoute>
+  )
+}

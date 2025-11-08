@@ -1,0 +1,133 @@
+'use client'
+
+import { useState } from 'react'
+import { usePurchaseOrders } from '@/hooks/usePurchaseOrders'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { PurchaseOrderForm } from './PurchaseOrderForm'
+import { PurchaseOrderDetails } from './PurchaseOrderDetails'
+import { format } from 'date-fns'
+import { Plus, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
+
+export function PurchaseOrderList() {
+  const [status, setStatus] = useState<string>('all')
+  const [page, setPage] = useState(1)
+  const [selectedPO, setSelectedPO] = useState<any>(null)
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+
+  const pageSize = 20
+  const { data, isLoading } = usePurchaseOrders({ status: status === 'all' ? undefined : status, page, pageSize })
+
+  const formatCurrency = (value: number) => {
+    return `KES ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case 'completed': return 'default'
+      case 'received': return 'default'
+      case 'ordered': return 'secondary'
+      default: return 'outline'
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Purchase Orders</h2>
+          <p className="text-sm text-muted-foreground">{data?.total || 0} total orders</p>
+        </div>
+        <Button onClick={() => { setSelectedPO(null); setIsFormOpen(true) }}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Purchase Order
+        </Button>
+      </div>
+
+      <Select value={status} onValueChange={(value) => { setStatus(value); setPage(1) }}>
+        <SelectTrigger className="w-[200px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Status</SelectItem>
+          <SelectItem value="draft">Draft</SelectItem>
+          <SelectItem value="ordered">Ordered</SelectItem>
+          <SelectItem value="received">Received</SelectItem>
+          <SelectItem value="completed">Completed</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {isLoading ? (
+        <div className="flex justify-center py-12"><LoadingSpinner /></div>
+      ) : !data?.purchaseOrders || data.purchaseOrders.length === 0 ? (
+        <div className="text-center py-12 bg-card border rounded-lg">
+          <p className="text-muted-foreground">No purchase orders found</p>
+        </div>
+      ) : (
+        <>
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>PO #</TableHead>
+                  <TableHead>Supplier</TableHead>
+                  <TableHead>Expected Delivery</TableHead>
+                  <TableHead className="text-right">Total Cost</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.purchaseOrders.map((po: any) => (
+                  <TableRow key={po.id}>
+                    <TableCell className="font-mono text-sm">{po.po_number}</TableCell>
+                    <TableCell>
+                      <div className="font-medium">{po.supplier_name}</div>
+                      {po.supplier_contact && (
+                        <div className="text-sm text-muted-foreground">{po.supplier_contact}</div>
+                      )}
+                    </TableCell>
+                    <TableCell>{format(new Date(po.expected_delivery_date), 'MMM dd, yyyy')}</TableCell>
+                    <TableCell className="text-right font-medium">{formatCurrency(po.total_cost)}</TableCell>
+                    <TableCell>
+                      <Badge variant={getStatusVariant(po.status)}>{po.status}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => { setSelectedPO(po); setIsDetailsOpen(true) }}>
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {data.totalPages > 1 && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">Page {page} of {data.totalPages}</p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(data.totalPages, p + 1))} disabled={page === data.totalPages}>
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      <PurchaseOrderForm po={selectedPO} open={isFormOpen} onOpenChange={setIsFormOpen} />
+      {selectedPO && <PurchaseOrderDetails po={selectedPO} open={isDetailsOpen} onOpenChange={setIsDetailsOpen} />}
+    </div>
+  )
+}
