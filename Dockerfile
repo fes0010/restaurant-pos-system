@@ -12,8 +12,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+# Build the application with webpack (not turbopack) due to PWA plugin
+RUN npm run build -- --webpack
 
 # Production stage
 FROM node:20-alpine AS runner
