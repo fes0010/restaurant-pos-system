@@ -5,7 +5,7 @@ import withPWA from "next-pwa";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: 'standalone',
-  // turbopack: {}, // Disabled - using standard webpack for better dev performance
+  turbopack: {}, // Empty config to silence Turbopack warning when using --webpack flag
   images: {
     remotePatterns: [
       {
