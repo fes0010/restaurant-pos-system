@@ -4,7 +4,17 @@ import withPWA from "next-pwa";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  turbopack: {}, // Enable Turbopack explicitly
+  // turbopack: {}, // Disabled - using standard webpack for better dev performance
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
+  },
 };
 
 // Only apply PWA in production builds

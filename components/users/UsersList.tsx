@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useUsers, useDeleteUser } from '@/hooks/useUsers'
+import { useAuth } from '@/contexts/AuthContext'
 import { User } from '@/lib/services/users'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,6 +26,7 @@ import {
 import { toast } from 'sonner'
 
 export function UsersList() {
+  const { user: currentUser } = useAuth()
   const [search, setSearch] = useState('')
   const [role, setRole] = useState('')
   const [page, setPage] = useState(1)
@@ -52,6 +54,12 @@ export function UsersList() {
   }
 
   const handleDelete = async (user: User) => {
+    // Prevent users from deleting their own account
+    if (currentUser && user.id === currentUser.id) {
+      toast.error('You cannot delete your own account')
+      return
+    }
+
     if (!confirm(`Are you sure you want to delete user "${user.full_name}"? This action cannot be undone.`)) {
       return
     }
@@ -174,6 +182,8 @@ export function UsersList() {
                       size="sm"
                       variant="outline"
                       onClick={() => handleDelete(user)}
+                      disabled={currentUser?.id === user.id}
+                      title={currentUser?.id === user.id ? 'You cannot delete your own account' : 'Delete user'}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>

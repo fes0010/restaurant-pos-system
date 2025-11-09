@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
-import { ProductSearch } from '@/components/pos/ProductSearch'
-import { Cart, CartItem } from '@/components/pos/Cart'
+import { ProductCardGrid } from '@/components/pos/ProductCardGrid'
+import { FloatingCart, CartItem } from '@/components/pos/FloatingCart'
 import { CustomerSelector } from '@/components/pos/CustomerSelector'
 import { CheckoutModal } from '@/components/pos/CheckoutModal'
 import { ReceiptPrint } from '@/components/pos/ReceiptPrint'
@@ -12,6 +12,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Product, Customer } from '@/types'
 import { Printer } from 'lucide-react'
+import { toast } from 'sonner'
 
 const CART_STORAGE_KEY = 'pos-cart'
 const DISCOUNT_STORAGE_KEY = 'pos-discount'
@@ -24,6 +25,8 @@ export default function POSPage() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
   const [completedTransactionId, setCompletedTransactionId] = useState<string | null>(null)
   const [isReceiptOpen, setIsReceiptOpen] = useState(false)
+  const [isCartExpanded, setIsCartExpanded] = useState(false)
+  const autoCollapseTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -72,12 +75,18 @@ export default function POSPage() {
   }, [selectedCustomer])
 
   const handleAddToCart = (product: Product) => {
+    if (Number(product.stock_quantity) <= 0) {
+      toast.error('Product is out of stock')
+      return
+    }
+
     setCartItems((prev) => {
       const existingItem = prev.find((item) => item.product.id === product.id)
       
       if (existingItem) {
         // Check if we can add more
         if (existingItem.quantity >= Number(product.stock_quantity)) {
+          toast.error('Cannot add more items than available in stock')
           return prev
         }
         // Increment quantity
@@ -91,7 +100,30 @@ export default function POSPage() {
         return [...prev, { product, quantity: 1 }]
       }
     })
+
+    // Show cart briefly and auto-collapse after 2 seconds
+    setIsCartExpanded(true)
+    toast.success(`${product.name} added to cart`)
+    
+    // Clear existing timer
+    if (autoCollapseTimerRef.current) {
+      clearTimeout(autoCollapseTimerRef.current)
+    }
+    
+    // Set new timer to auto-collapse
+    autoCollapseTimerRef.current = setTimeout(() => {
+      setIsCartExpanded(false)
+    }, 2000)
   }
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoCollapseTimerRef.current) {
+        clearTimeout(autoCollapseTimerRef.current)
+      }
+    }
+  }, [])
 
   const handleUpdateQuantity = (productId: string, quantity: number) => {
     setCartItems((prev) =>
@@ -130,50 +162,52 @@ export default function POSPage() {
   const discountAmount = discount > 0 ? (discount <= 100 ? subtotal * (discount / 100) : discount) : 0
   const total = Math.max(0, subtotal - discountAmount)
 
+  const handleToggleCart = () => {
+    setIsCartExpanded((prev) => !prev)
+    // Clear auto-collapse timer when manually toggling
+    if (autoCollapseTimerRef.current) {
+      clearTimeout(autoCollapseTimerRef.current)
+      autoCollapseTimerRef.current = null
+    }
+  }
+
   return (
     <ProtectedRoute>
       <AppLayout>
-        <div className="h-[calc(100vh-4rem)]">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-            {/* Product Search - Left Side */}
-            <div className="lg:col-span-2 overflow-hidden">
-              <div className="bg-card border rounded-lg p-6 h-full flex flex-col">
-                <div className="mb-4">
-                  <h1 className="text-2xl font-bold">Point of Sale</h1>
-                  <p className="text-muted-foreground mt-1">
-                    Search and add products to cart
-                  </p>
-                </div>
-                
-                <div className="mb-4">
-                  <CustomerSelector
-                    selectedCustomer={selectedCustomer}
-                    onSelectCustomer={setSelectedCustomer}
-                  />
-                </div>
-
-                <div className="flex-1 overflow-hidden">
-                  <ProductSearch onAddToCart={handleAddToCart} />
-                </div>
-              </div>
+        <div className="h-[calc(100vh-4rem)] pr-20">
+          <div className="bg-card border rounded-lg p-6 h-full flex flex-col">
+            <div className="mb-4">
+              <h1 className="text-2xl font-bold">Point of Sale</h1>
+              <p className="text-muted-foreground mt-1">
+                Browse and add products to cart
+              </p>
+            </div>
+            
+            <div className="mb-4">
+              <CustomerSelector
+                selectedCustomer={selectedCustomer}
+                onSelectCustomer={setSelectedCustomer}
+              />
             </div>
 
-            {/* Cart - Right Side */}
-            <div className="lg:col-span-1">
-              <div className="bg-card border rounded-lg h-full">
-                <Cart
-                  items={cartItems}
-                  discount={discount}
-                  onUpdateQuantity={handleUpdateQuantity}
-                  onRemoveItem={handleRemoveItem}
-                  onUpdateDiscount={setDiscount}
-                  onClearCart={handleClearCart}
-                  onCheckout={handleCheckout}
-                />
-              </div>
+            <div className="flex-1 overflow-hidden">
+              <ProductCardGrid onAddToCart={handleAddToCart} />
             </div>
           </div>
         </div>
+
+        {/* Floating Cart */}
+        <FloatingCart
+          items={cartItems}
+          discount={discount}
+          isExpanded={isCartExpanded}
+          onToggle={handleToggleCart}
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemoveItem={handleRemoveItem}
+          onUpdateDiscount={setDiscount}
+          onClearCart={handleClearCart}
+          onCheckout={handleCheckout}
+        />
 
         {/* Checkout Modal */}
         <CheckoutModal

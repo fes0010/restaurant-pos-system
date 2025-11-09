@@ -14,7 +14,7 @@ import { Product } from '@/types'
 
 const adjustmentSchema = z.object({
   type: z.enum(['restock', 'adjustment']),
-  quantity: z.number().min(0.01, 'Quantity must be positive'),
+  quantity: z.number().min(0, 'Quantity cannot be negative'),
   reason: z.string().min(3, 'Reason must be at least 3 characters'),
 })
 
@@ -34,6 +34,7 @@ export function StockAdjustmentModal({ product, open, onOpenChange }: StockAdjus
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<AdjustmentFormData>({
     resolver: zodResolver(adjustmentSchema),
@@ -44,11 +45,17 @@ export function StockAdjustmentModal({ product, open, onOpenChange }: StockAdjus
     },
   })
 
+  const quantity = watch('quantity')
+
   async function onSubmit(data: AdjustmentFormData) {
     if (!product) return
 
     try {
-      const quantityChange = isAdjustment ? data.quantity : data.quantity
+      // For adjustment, calculate the difference to reach the target quantity
+      // For restock, just add the quantity
+      const quantityChange = isAdjustment 
+        ? data.quantity - Number(product.stock_quantity) // Set to specific quantity
+        : data.quantity // Add to existing quantity
 
       await adjustStock.mutateAsync({
         productId: product.id,
@@ -86,8 +93,8 @@ export function StockAdjustmentModal({ product, open, onOpenChange }: StockAdjus
               className="w-full px-3 py-2 border border-input rounded-md bg-background"
               onChange={(e) => setIsAdjustment(e.target.value === 'adjustment')}
             >
-              <option value="restock">Restock (Add)</option>
-              <option value="adjustment">Adjustment (Add/Remove)</option>
+              <option value="restock">Restock (Add to current stock)</option>
+              <option value="adjustment">Adjustment (Set to specific quantity)</option>
             </select>
             {errors.type && (
               <p className="mt-1 text-sm text-destructive">{errors.type.message}</p>
@@ -95,14 +102,25 @@ export function StockAdjustmentModal({ product, open, onOpenChange }: StockAdjus
           </div>
 
           <div>
-            <Label htmlFor="quantity">Quantity</Label>
+            <Label htmlFor="quantity">
+              {isAdjustment ? 'New Stock Quantity' : 'Quantity to Add'}
+            </Label>
             <Input
               {...register('quantity', { valueAsNumber: true })}
               id="quantity"
               type="number"
               step="0.01"
-              placeholder="Enter quantity"
+              placeholder={isAdjustment ? 'Enter new total quantity' : 'Enter quantity to add'}
             />
+            {isAdjustment && product && quantity !== undefined && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Current: {product.stock_quantity} {product.base_unit} → Change: {' '}
+                <span className={quantity - Number(product.stock_quantity) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {quantity - Number(product.stock_quantity) >= 0 ? '+' : ''}
+                  {(quantity - Number(product.stock_quantity)).toFixed(2)} {product.base_unit}
+                </span>
+              </p>
+            )}
             {errors.quantity && (
               <p className="mt-1 text-sm text-destructive">{errors.quantity.message}</p>
             )}

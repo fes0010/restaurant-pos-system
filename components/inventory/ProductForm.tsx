@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ImageUpload } from '@/components/inventory/ImageUpload'
 import { useCreateProduct, useUpdateProduct } from '@/hooks/useProducts'
 import { toast } from 'sonner'
 import { Product } from '@/types'
@@ -24,6 +25,7 @@ const productSchema = z.object({
   unit_conversion_ratio: z.number().min(0.0001, 'Conversion ratio must be positive'),
   stock_quantity: z.number().min(0, 'Stock quantity must be non-negative'),
   low_stock_threshold: z.number().min(0, 'Threshold must be non-negative'),
+  image_url: z.string().optional(),
 })
 
 type ProductFormData = z.infer<typeof productSchema>
@@ -38,11 +40,13 @@ export function ProductForm({ product, open, onOpenChange }: ProductFormProps) {
   const createProduct = useCreateProduct()
   const updateProduct = useUpdateProduct()
   const isEditing = !!product
+  const [imageUrl, setImageUrl] = useState<string>('')
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -58,6 +62,7 @@ export function ProductForm({ product, open, onOpenChange }: ProductFormProps) {
       unit_conversion_ratio: 1,
       stock_quantity: 0,
       low_stock_threshold: 10,
+      image_url: '',
     },
   })
 
@@ -75,11 +80,19 @@ export function ProductForm({ product, open, onOpenChange }: ProductFormProps) {
         unit_conversion_ratio: Number(product.unit_conversion_ratio),
         stock_quantity: Number(product.stock_quantity),
         low_stock_threshold: Number(product.low_stock_threshold),
+        image_url: product.image_url || '',
       })
+      setImageUrl(product.image_url || '')
     } else {
       reset()
+      setImageUrl('')
     }
   }, [product, reset])
+
+  const handleImageUpload = (url: string) => {
+    setImageUrl(url)
+    setValue('image_url', url)
+  }
 
   async function onSubmit(data: ProductFormData) {
     try {
@@ -105,6 +118,12 @@ export function ProductForm({ product, open, onOpenChange }: ProductFormProps) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <ImageUpload
+            currentImageUrl={imageUrl}
+            onUpload={handleImageUpload}
+            productId={product?.id}
+          />
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="sku">SKU *</Label>
