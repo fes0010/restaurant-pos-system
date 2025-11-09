@@ -174,16 +174,16 @@ export default function POSPage() {
   return (
     <ProtectedRoute>
       <AppLayout>
-        <div className="h-[calc(100vh-4rem)] pr-20">
-          <div className="bg-card border rounded-lg p-6 h-full flex flex-col">
-            <div className="mb-4">
-              <h1 className="text-2xl font-bold">Point of Sale</h1>
-              <p className="text-muted-foreground mt-1">
+        <div className="h-[calc(100vh-4rem)]">
+          <div className="bg-card border rounded-lg p-4 sm:p-6 h-full flex flex-col">
+            <div className="mb-3 sm:mb-4">
+              <h1 className="text-xl sm:text-2xl font-bold">Point of Sale</h1>
+              <p className="text-muted-foreground mt-1 text-sm sm:text-base">
                 Browse and add products to cart
               </p>
             </div>
             
-            <div className="mb-4">
+            <div className="mb-3 sm:mb-4">
               <CustomerSelector
                 selectedCustomer={selectedCustomer}
                 onSelectCustomer={setSelectedCustomer}

@@ -108,27 +108,31 @@ export function FloatingCart({
       <div
         ref={cartRef}
         className={cn(
-          'fixed right-0 top-0 h-full bg-card border-l shadow-2xl z-50 transition-all duration-300 ease-in-out',
-          isExpanded ? 'w-full sm:w-96' : 'w-20'
+          'fixed z-50 transition-all duration-300 ease-in-out',
+          isExpanded 
+            ? 'right-0 top-0 h-full w-full sm:w-96 bg-card border-l shadow-2xl' 
+            : 'bottom-6 right-6 sm:bottom-8 sm:right-8'
         )}
       >
-        {/* Collapsed State */}
+        {/* Collapsed State - Floating Button */}
         {!isExpanded && (
           <button
             onClick={onToggle}
-            className="flex flex-col items-center justify-center w-full h-32 hover:bg-accent transition-colors group"
+            className="flex flex-col items-center justify-center bg-primary text-primary-foreground rounded-full shadow-2xl hover:scale-110 transition-transform group w-16 h-16 sm:w-20 sm:h-20"
           >
             <div className="relative">
-              <ShoppingCart className="h-8 w-8 text-foreground group-hover:text-primary transition-colors" />
+              <ShoppingCart className="h-6 w-6 sm:h-8 sm:w-8" />
               {items.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 bg-background text-foreground text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center border-2 border-primary">
                   {items.length}
                 </span>
               )}
             </div>
-            <span className="text-xs font-semibold mt-2 text-center px-1">
-              {formatCurrency(total)}
-            </span>
+            {total > 0 && (
+              <span className="text-[10px] sm:text-xs font-semibold mt-1 text-center">
+                {formatCurrency(total).replace('KES ', '')}
+              </span>
+            )}
           </button>
         )}
 
