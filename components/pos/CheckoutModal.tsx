@@ -60,7 +60,7 @@ export function CheckoutModal({
           product_name: item.product.name,
           product_sku: item.product.sku,
           quantity: item.quantity,
-          unit_price: Number(item.product.price),
+          unit_price: item.customPrice !== undefined ? item.customPrice : Number(item.product.price),
         })),
         subtotal,
         discount_type: discount > 0 && discount <= 100 ? 'percentage' : 'fixed',

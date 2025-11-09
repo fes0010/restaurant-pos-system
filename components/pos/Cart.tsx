@@ -9,6 +9,7 @@ import { Minus, Plus, Trash2, ShoppingCart } from 'lucide-react'
 export interface CartItem {
   product: Product
   quantity: number
+  customPrice?: number
 }
 
 interface CartProps {

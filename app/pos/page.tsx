@@ -133,6 +133,14 @@ export default function POSPage() {
     )
   }
 
+  const handleUpdatePrice = (productId: string, price: number) => {
+    setCartItems((prev) =>
+      prev.map((item) =>
+        item.product.id === productId ? { ...item, customPrice: price } : item
+      )
+    )
+  }
+
   const handleRemoveItem = (productId: string) => {
     setCartItems((prev) => prev.filter((item) => item.product.id !== productId))
   }
@@ -158,7 +166,11 @@ export default function POSPage() {
     setSelectedCustomer(null)
   }
 
-  const subtotal = cartItems.reduce((sum, item) => sum + Number(item.product.price) * item.quantity, 0)
+  const getItemPrice = (item: CartItem) => {
+    return item.customPrice !== undefined ? item.customPrice : Number(item.product.price)
+  }
+
+  const subtotal = cartItems.reduce((sum, item) => sum + getItemPrice(item) * item.quantity, 0)
   const discountAmount = discount > 0 ? (discount <= 100 ? subtotal * (discount / 100) : discount) : 0
   const total = Math.max(0, subtotal - discountAmount)
 
@@ -203,6 +215,7 @@ export default function POSPage() {
           isExpanded={isCartExpanded}
           onToggle={handleToggleCart}
           onUpdateQuantity={handleUpdateQuantity}
+          onUpdatePrice={handleUpdatePrice}
           onRemoveItem={handleRemoveItem}
           onUpdateDiscount={setDiscount}
           onClearCart={handleClearCart}

@@ -5,12 +5,13 @@ import { Product } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Minus, Plus, Trash2, ShoppingCart, X, ChevronLeft } from 'lucide-react'
+import { Minus, Plus, Trash2, ShoppingCart, ChevronLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface CartItem {
   product: Product
   quantity: number
+  customPrice?: number // Optional custom price override
 }
 
 interface FloatingCartProps {
@@ -19,6 +20,7 @@ interface FloatingCartProps {
   isExpanded: boolean
   onToggle: () => void
   onUpdateQuantity: (productId: string, quantity: number) => void
+  onUpdatePrice: (productId: string, price: number) => void
   onRemoveItem: (productId: string) => void
   onUpdateDiscount: (discount: number) => void
   onClearCart: () => void
@@ -31,6 +33,7 @@ export function FloatingCart({
   isExpanded,
   onToggle,
   onUpdateQuantity,
+  onUpdatePrice,
   onRemoveItem,
   onUpdateDiscount,
   onClearCart,
@@ -45,8 +48,12 @@ export function FloatingCart({
     })}`
   }
 
+  const getItemPrice = (item: CartItem) => {
+    return item.customPrice !== undefined ? item.customPrice : Number(item.product.price)
+  }
+
   const subtotal = items.reduce((sum, item) => {
-    return sum + Number(item.product.price) * item.quantity
+    return sum + getItemPrice(item) * item.quantity
   }, 0)
 
   const discountAmount = discount > 0 
@@ -175,63 +182,102 @@ export function FloatingCart({
                   <p className="text-sm mt-1">Add products to get started</p>
                 </div>
               ) : (
-                items.map((item) => (
-                  <div key={item.product.id} className="border rounded-lg p-3">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-sm">{item.product.name}</h3>
-                        <p className="text-xs text-muted-foreground">{item.product.sku}</p>
+                items.map((item) => {
+                  const itemPrice = getItemPrice(item)
+                  const hasCustomPrice = item.customPrice !== undefined
+                  
+                  return (
+                    <div key={item.product.id} className="border rounded-lg p-3 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-medium text-sm">{item.product.name}</h3>
+                          <p className="text-xs text-muted-foreground">{item.product.sku}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onRemoveItem(item.product.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onRemoveItem(item.product.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleQuantityChange(item.product.id, item.quantity - 1)}
-                          disabled={item.quantity <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <Input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value) || 1
-                            handleQuantityChange(item.product.id, val)
-                          }}
-                          className="w-16 text-center"
-                          min={1}
-                          max={Number(item.product.stock_quantity)}
-                        />
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleQuantityChange(item.product.id, item.quantity + 1)}
-                          disabled={item.quantity >= Number(item.product.stock_quantity)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs text-muted-foreground">
-                          {formatCurrency(Number(item.product.price))} × {item.quantity}
+                      {/* Price Input */}
+                      <div className="space-y-1">
+                        <Label className="text-xs">Price per unit</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            value={itemPrice}
+                            onChange={(e) => {
+                              const newPrice = parseFloat(e.target.value) || 0
+                              onUpdatePrice(item.product.id, newPrice)
+                            }}
+                            className="h-8 text-sm"
+                            min={0}
+                            step="0.01"
+                          />
+                          {hasCustomPrice && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onUpdatePrice(item.product.id, Number(item.product.price))}
+                              className="text-xs h-8"
+                            >
+                              Reset
+                            </Button>
+                          )}
                         </div>
-                        <div className="font-semibold text-sm">
-                          {formatCurrency(Number(item.product.price) * item.quantity)}
+                        {hasCustomPrice && (
+                          <p className="text-xs text-amber-600 dark:text-amber-500">
+                            Original: {formatCurrency(Number(item.product.price))}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Quantity Controls */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuantityChange(item.product.id, item.quantity - 1)}
+                            disabled={item.quantity <= 1}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <Input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 1
+                              handleQuantityChange(item.product.id, val)
+                            }}
+                            className="w-16 text-center h-8"
+                            min={1}
+                            max={Number(item.product.stock_quantity)}
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleQuantityChange(item.product.id, item.quantity + 1)}
+                            disabled={item.quantity >= Number(item.product.stock_quantity)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-muted-foreground">
+                            {formatCurrency(itemPrice)} × {item.quantity}
+                          </div>
+                          <div className="font-semibold text-sm">
+                            {formatCurrency(itemPrice * item.quantity)}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
 
