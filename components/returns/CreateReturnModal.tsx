@@ -53,6 +53,7 @@ export function CreateReturnModal({ transactionId, open, onOpenChange }: CreateR
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<ReturnFormData>({
     resolver: zodResolver(returnSchema),
@@ -62,14 +63,21 @@ export function CreateReturnModal({ transactionId, open, onOpenChange }: CreateR
     },
   })
 
+  // Update transaction_id when prop changes
+  useEffect(() => {
+    if (transactionId) {
+      setValue('transaction_id', transactionId)
+    }
+  }, [transactionId, setValue])
+
   // Initialize return items from transaction
   useEffect(() => {
-    if (transaction?.transaction_items) {
+    if (transaction?.items) {
       setReturnItems(
-        transaction.transaction_items.map((item: any) => ({
+        transaction.items.map((item: any) => ({
           product_id: item.product_id,
-          product_name: item.product?.name || 'Unknown',
-          product_sku: item.product?.sku || '',
+          product_name: item.product_name,
+          product_sku: item.product_sku,
           max_quantity: item.quantity,
           unit_price: item.unit_price,
           quantity: 0,

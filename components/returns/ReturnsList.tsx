@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useReturns } from '@/hooks/useReturns'
 import { Return } from '@/lib/services/returns'
 import { Button } from '@/components/ui/button'
@@ -40,11 +41,15 @@ const statusConfig = {
 }
 
 export function ReturnsList() {
+  const searchParams = useSearchParams()
+  const transactionId = searchParams.get('transaction_id')
+  
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(1)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedReturn, setSelectedReturn] = useState<Return | null>(null)
+  const [preselectedTransactionId, setPreselectedTransactionId] = useState<string | undefined>()
 
   const { data: returnsData, isLoading } = useReturns({
     search: search || undefined,
@@ -52,6 +57,14 @@ export function ReturnsList() {
     page,
     pageSize: 20,
   })
+
+  // Open create modal if transaction_id is in URL
+  useEffect(() => {
+    if (transactionId) {
+      setPreselectedTransactionId(transactionId)
+      setShowCreateModal(true)
+    }
+  }, [transactionId])
 
   const openReturnDetails = (returnItem: Return) => {
     setSelectedReturn(returnItem)
@@ -237,8 +250,14 @@ export function ReturnsList() {
 
       {/* Modals */}
       <CreateReturnModal
+        transactionId={preselectedTransactionId}
         open={showCreateModal}
-        onOpenChange={setShowCreateModal}
+        onOpenChange={(open) => {
+          setShowCreateModal(open)
+          if (!open) {
+            setPreselectedTransactionId(undefined)
+          }
+        }}
       />
 
       <ReturnDetailsModal

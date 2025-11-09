@@ -62,6 +62,7 @@ export type Database = {
           created_by: string
           description: string | null
           id: string
+          image_url: string | null
           is_archived: boolean
           low_stock_threshold: number
           name: string
@@ -81,6 +82,7 @@ export type Database = {
           created_by: string
           description?: string | null
           id?: string
+          image_url?: string | null
           is_archived?: boolean
           low_stock_threshold?: number
           name: string
@@ -100,6 +102,7 @@ export type Database = {
           created_by?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           is_archived?: boolean
           low_stock_threshold?: number
           name?: string

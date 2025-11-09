@@ -75,14 +75,28 @@ export async function createReturn(tenantId: string, userId: string, data: Creat
 
   if (returnError) throw returnError
 
-  // Create return items
-  const returnItems = data.items.map(item => ({
-    return_id: returnData.id,
-    product_id: item.product_id,
-    quantity: item.quantity,
-    unit_price: item.unit_price,
-    subtotal: item.subtotal,
-  }))
+  // Get transaction items to map to return items
+  const { data: transactionItems, error: txItemsError } = await supabase
+    .from('transaction_items')
+    .select('id, product_id, product_name')
+    .eq('transaction_id', data.transaction_id)
+
+  if (txItemsError) throw txItemsError
+
+  // Create return items with proper mapping
+  const returnItems = data.items.map(item => {
+    const txItem = transactionItems.find(ti => ti.product_id === item.product_id)
+    return {
+      tenant_id: tenantId,
+      return_id: returnData.id,
+      transaction_item_id: txItem?.id || '',
+      product_id: item.product_id,
+      product_name: txItem?.product_name || '',
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      subtotal: item.subtotal,
+    }
+  })
 
   const { error: itemsError } = await supabase
     .from('return_items')

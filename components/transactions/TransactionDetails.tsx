@@ -7,7 +7,10 @@ import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { Printer, RotateCcw } from 'lucide-react'
 import { ReceiptPrint } from '@/components/pos/ReceiptPrint'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { useState } from 'react'
+import { useTransaction } from '@/hooks/useTransactions'
+import { useRouter } from 'next/navigation'
 
 interface TransactionDetailsProps {
   transaction: Transaction
@@ -17,6 +20,10 @@ interface TransactionDetailsProps {
 
 export function TransactionDetails({ transaction, open, onOpenChange }: TransactionDetailsProps) {
   const [showReceipt, setShowReceipt] = useState(false)
+  const router = useRouter()
+  
+  // Fetch full transaction details with items
+  const { data: fullTransaction, isLoading } = useTransaction(transaction.id)
 
   const formatCurrency = (value: number | string) => {
     return `KES ${Number(value).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -30,9 +37,18 @@ export function TransactionDetails({ transaction, open, onOpenChange }: Transact
     }, 500)
   }
 
+  const handleCreateReturn = () => {
+    // Navigate to returns page with transaction ID
+    router.push(`/returns?transaction_id=${transaction.id}`)
+    onOpenChange(false)
+  }
+
   if (showReceipt) {
     return <ReceiptPrint transactionId={transaction.id} />
   }
+
+  // Use fullTransaction if available, otherwise use the passed transaction
+  const displayTransaction = fullTransaction || transaction
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -41,100 +57,117 @@ export function TransactionDetails({ transaction, open, onOpenChange }: Transact
           <DialogTitle>Transaction Details</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Transaction Info */}
-          <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
-            <div>
-              <div className="text-sm text-muted-foreground">Transaction #</div>
-              <div className="font-mono font-medium">{transaction.transaction_number}</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Date</div>
-              <div className="font-medium">
-                {format(new Date(transaction.created_at), 'MMM dd, yyyy HH:mm')}
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <LoadingSpinner />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Transaction Info */}
+            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+              <div>
+                <div className="text-sm text-muted-foreground">Transaction #</div>
+                <div className="font-mono font-medium">{displayTransaction.transaction_number}</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Date</div>
+                <div className="font-medium">
+                  {format(new Date(displayTransaction.created_at), 'MMM dd, yyyy HH:mm')}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Customer</div>
+                <div className="font-medium">{displayTransaction.customer?.name || 'Walk-in'}</div>
+                {displayTransaction.customer?.phone && (
+                  <div className="text-sm text-muted-foreground">{displayTransaction.customer.phone}</div>
+                )}
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Payment Method</div>
+                <div className="font-medium capitalize">{displayTransaction.payment_method}</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Status</div>
+                <Badge variant={displayTransaction.status === 'completed' ? 'default' : 'secondary'}>
+                  {displayTransaction.status.replace('_', ' ')}
+                </Badge>
               </div>
             </div>
+
+            {/* Items */}
             <div>
-              <div className="text-sm text-muted-foreground">Customer</div>
-              <div className="font-medium">{transaction.customer?.name || 'Walk-in'}</div>
-              {transaction.customer?.phone && (
-                <div className="text-sm text-muted-foreground">{transaction.customer.phone}</div>
+              <h3 className="font-semibold mb-3">Items</h3>
+              {!displayTransaction.items || displayTransaction.items.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground border rounded-lg">
+                  No items found
+                </div>
+              ) : (
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left p-3 text-sm font-medium">Product</th>
+                        <th className="text-center p-3 text-sm font-medium">Qty</th>
+                        <th className="text-right p-3 text-sm font-medium">Price</th>
+                        <th className="text-right p-3 text-sm font-medium">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayTransaction.items.map((item: any) => (
+                        <tr key={item.id} className="border-t">
+                          <td className="p-3">
+                            <div className="font-medium">{item.product_name}</div>
+                            <div className="text-sm text-muted-foreground">{item.product_sku}</div>
+                          </td>
+                          <td className="text-center p-3">{item.quantity}</td>
+                          <td className="text-right p-3">{formatCurrency(item.unit_price)}</td>
+                          <td className="text-right p-3 font-medium">{formatCurrency(item.subtotal)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Payment Method</div>
-              <div className="font-medium capitalize">{transaction.payment_method}</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Status</div>
-              <Badge variant={transaction.status === 'completed' ? 'default' : 'secondary'}>
-                {transaction.status.replace('_', ' ')}
-              </Badge>
-            </div>
-          </div>
 
-          {/* Items */}
-          <div>
-            <h3 className="font-semibold mb-3">Items</h3>
-            <div className="border rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="text-left p-3 text-sm font-medium">Product</th>
-                    <th className="text-center p-3 text-sm font-medium">Qty</th>
-                    <th className="text-right p-3 text-sm font-medium">Price</th>
-                    <th className="text-right p-3 text-sm font-medium">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transaction.items?.map((item) => (
-                    <tr key={item.id} className="border-t">
-                      <td className="p-3">
-                        <div className="font-medium">{item.product_name}</div>
-                        <div className="text-sm text-muted-foreground">{item.product_sku}</div>
-                      </td>
-                      <td className="text-center p-3">{item.quantity}</td>
-                      <td className="text-right p-3">{formatCurrency(item.unit_price)}</td>
-                      <td className="text-right p-3 font-medium">{formatCurrency(item.subtotal)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Totals */}
-          <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span>{formatCurrency(transaction.subtotal)}</span>
-            </div>
-            {transaction.discount_amount > 0 && (
-              <div className="flex justify-between text-sm text-green-600 dark:text-green-500">
-                <span>
-                  Discount ({transaction.discount_type === 'percentage' ? `${transaction.discount_value}%` : 'Fixed'})
-                </span>
-                <span>-{formatCurrency(transaction.discount_amount)}</span>
+            {/* Totals */}
+            <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span>{formatCurrency(displayTransaction.subtotal)}</span>
               </div>
-            )}
-            <div className="flex justify-between text-lg font-bold pt-2 border-t">
-              <span>Total</span>
-              <span>{formatCurrency(transaction.total)}</span>
+              {displayTransaction.discount_amount > 0 && (
+                <div className="flex justify-between text-sm text-green-600 dark:text-green-500">
+                  <span>
+                    Discount ({displayTransaction.discount_type === 'percentage' ? `${displayTransaction.discount_value}%` : 'Fixed'})
+                  </span>
+                  <span>-{formatCurrency(displayTransaction.discount_amount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-lg font-bold pt-2 border-t">
+                <span>Total</span>
+                <span>{formatCurrency(displayTransaction.total)}</span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              <Button onClick={handlePrintReceipt} className="flex-1">
+                <Printer className="h-4 w-4 mr-2" />
+                Print Receipt
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex-1"
+                onClick={handleCreateReturn}
+                disabled={!displayTransaction.items || displayTransaction.items.length === 0}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Create Return
+              </Button>
             </div>
           </div>
-
-          {/* Actions */}
-          <div className="flex gap-2">
-            <Button onClick={handlePrintReceipt} className="flex-1">
-              <Printer className="h-4 w-4 mr-2" />
-              Print Receipt
-            </Button>
-            <Button variant="outline" className="flex-1">
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Create Return
-            </Button>
-          </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   )

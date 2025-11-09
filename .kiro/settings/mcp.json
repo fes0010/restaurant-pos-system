@@ -13,7 +13,8 @@
         "apply_migration",
         "get_project_url",
         "get_anon_key",
-        "generate_typescript_types"
+        "generate_typescript_types",
+        "search_docs"
       ]
     }
   }
