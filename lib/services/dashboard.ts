@@ -16,6 +16,7 @@ export interface LowStockProduct {
   sku: string
   stock_quantity: number
   low_stock_threshold: number
+  base_unit: string
 }
 
 export async function getDashboardKPIs(
@@ -107,7 +108,7 @@ export async function getLowStockProducts(tenantId: string): Promise<LowStockPro
   // Get products where stock is at or below their threshold
   const { data } = await supabase
     .from('products')
-    .select('id, name, sku, stock_quantity, low_stock_threshold')
+    .select('id, name, sku, stock_quantity, low_stock_threshold, base_unit')
     .eq('tenant_id', tenantId)
     .eq('is_archived', false)
     .order('stock_quantity', { ascending: true })

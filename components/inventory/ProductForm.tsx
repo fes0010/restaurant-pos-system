@@ -18,14 +18,28 @@ const productSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   description: z.string().optional(),
   category: z.string().min(1, 'Category is required'),
-  price: z.number().min(0.01, 'Price must be positive'),
-  cost: z.number().min(0, 'Cost must be non-negative'),
+  is_variable_price: z.boolean(),
+  price: z.union([z.number(), z.null()]).optional(),
+  cost: z.union([z.number(), z.null()]).optional(),
   base_unit: z.string().min(1, 'Base unit is required'),
   purchase_unit: z.string().min(1, 'Purchase unit is required'),
   unit_conversion_ratio: z.number().min(0.0001, 'Conversion ratio must be positive'),
   stock_quantity: z.number().min(0, 'Stock quantity must be non-negative'),
   low_stock_threshold: z.number().min(0, 'Threshold must be non-negative'),
   image_url: z.string().optional(),
+}).refine((data) => {
+  // If not variable price, price must be provided and positive
+  if (!data.is_variable_price && (!data.price || data.price <= 0)) {
+    return false
+  }
+  // If not variable price, cost should be provided
+  if (!data.is_variable_price && (data.cost === null || data.cost === undefined || data.cost < 0)) {
+    return false
+  }
+  return true
+}, {
+  message: 'Price and cost are required for fixed-price products',
+  path: ['price'],
 })
 
 type ProductFormData = z.infer<typeof productSchema>
@@ -41,12 +55,14 @@ export function ProductForm({ product, open, onOpenChange }: ProductFormProps) {
   const updateProduct = useUpdateProduct()
   const isEditing = !!product
   const [imageUrl, setImageUrl] = useState<string>('')
+  const [isVariablePrice, setIsVariablePrice] = useState(false)
 
   const {
     register,
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -55,6 +71,7 @@ export function ProductForm({ product, open, onOpenChange }: ProductFormProps) {
       name: '',
       description: '',
       category: '',
+      is_variable_price: false,
       price: 0,
       cost: 0,
       base_unit: 'piece',
@@ -66,14 +83,19 @@ export function ProductForm({ product, open, onOpenChange }: ProductFormProps) {
     },
   })
 
+  // Watch is_variable_price to update local state
+  const watchVariablePrice = watch('is_variable_price')
+
   useEffect(() => {
     if (product) {
+      const isVarPrice = product.is_variable_price || false
       reset({
         sku: product.sku,
         name: product.name,
         description: product.description || '',
         category: product.category,
-        price: Number(product.price),
+        is_variable_price: isVarPrice,
+        price: product.price !== null ? Number(product.price) : null,
         cost: Number(product.cost),
         base_unit: product.base_unit,
         purchase_unit: product.purchase_unit,
@@ -83,11 +105,17 @@ export function ProductForm({ product, open, onOpenChange }: ProductFormProps) {
         image_url: product.image_url || '',
       })
       setImageUrl(product.image_url || '')
+      setIsVariablePrice(isVarPrice)
     } else {
       reset()
       setImageUrl('')
+      setIsVariablePrice(false)
     }
   }, [product, reset])
+
+  useEffect(() => {
+    setIsVariablePrice(watchVariablePrice || false)
+  }, [watchVariablePrice])
 
   const handleImageUpload = (url: string) => {
     setImageUrl(url)
@@ -96,11 +124,17 @@ export function ProductForm({ product, open, onOpenChange }: ProductFormProps) {
 
   async function onSubmit(data: ProductFormData) {
     try {
+      const submitData = {
+        ...data,
+        price: data.price ?? null,
+        cost: data.cost ?? null,
+      }
+      
       if (isEditing) {
-        await updateProduct.mutateAsync({ id: product.id, ...data })
+        await updateProduct.mutateAsync({ id: product.id, ...submitData })
         toast.success('Product updated successfully')
       } else {
-        await createProduct.mutateAsync(data)
+        await createProduct.mutateAsync(submitData)
         toast.success('Product created successfully')
       }
       reset()
@@ -155,16 +189,59 @@ export function ProductForm({ product, open, onOpenChange }: ProductFormProps) {
             />
           </div>
 
+          <div className="flex items-start space-x-2 p-3 border border-border rounded-md bg-muted/50">
+            <input
+              type="checkbox"
+              id="is_variable_price"
+              {...register('is_variable_price')}
+              className="mt-1 h-4 w-4 rounded border-gray-300"
+            />
+            <div className="flex-1">
+              <Label htmlFor="is_variable_price" className="cursor-pointer font-medium">
+                Variable Price Product
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Price will be entered at point of sale and completes sale immediately (bypasses cart)
+              </p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="price">Price *</Label>
-              <Input {...register('price', { valueAsNumber: true })} id="price" type="number" step="0.01" placeholder="0.00" />
+              <Label htmlFor="price">
+                Price {!isVariablePrice && '*'}
+                {isVariablePrice && <span className="text-xs text-muted-foreground ml-1">(Optional)</span>}
+              </Label>
+              <Input 
+                {...register('price', { 
+                  valueAsNumber: true,
+                  setValueAs: (v) => v === '' ? null : Number(v)
+                })} 
+                id="price" 
+                type="number" 
+                step="0.01" 
+                placeholder={isVariablePrice ? "Will be set at POS" : "0.00"}
+                disabled={isVariablePrice}
+              />
               {errors.price && <p className="mt-1 text-sm text-destructive">{errors.price.message}</p>}
             </div>
 
             <div>
-              <Label htmlFor="cost">Cost *</Label>
-              <Input {...register('cost', { valueAsNumber: true })} id="cost" type="number" step="0.01" placeholder="0.00" />
+              <Label htmlFor="cost">
+                Cost {!isVariablePrice && '*'}
+                {isVariablePrice && <span className="text-xs text-muted-foreground ml-1">(Optional)</span>}
+              </Label>
+              <Input 
+                {...register('cost', { 
+                  valueAsNumber: true,
+                  setValueAs: (v) => v === '' ? null : Number(v)
+                })} 
+                id="cost" 
+                type="number" 
+                step="0.01" 
+                placeholder={isVariablePrice ? "Not required" : "0.00"}
+                disabled={isVariablePrice}
+              />
               {errors.cost && <p className="mt-1 text-sm text-destructive">{errors.cost.message}</p>}
             </div>
           </div>

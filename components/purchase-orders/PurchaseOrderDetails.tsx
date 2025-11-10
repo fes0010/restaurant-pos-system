@@ -3,6 +3,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { SemanticBadge } from '@/components/ui/semantic-badge'
+import { MonetaryValue } from '@/components/ui/value-display'
 import { useUpdatePurchaseOrderStatus, useRestockFromPurchaseOrder } from '@/hooks/usePurchaseOrders'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
@@ -54,6 +56,15 @@ export function PurchaseOrderDetails({ po, open, onOpenChange }: PurchaseOrderDe
 
   const nextStatus = getNextStatus()
 
+  const getStatusVariant = (status: string): 'success' | 'pending' | 'info' | 'inactive' => {
+    switch (status) {
+      case 'completed': return 'success'
+      case 'received': return 'pending'
+      case 'ordered': return 'info'
+      default: return 'inactive'
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -69,7 +80,7 @@ export function PurchaseOrderDetails({ po, open, onOpenChange }: PurchaseOrderDe
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Status</div>
-              <Badge>{po.status}</Badge>
+              <SemanticBadge variant={getStatusVariant(po.status)}>{po.status}</SemanticBadge>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Supplier</div>
@@ -106,8 +117,12 @@ export function PurchaseOrderDetails({ po, open, onOpenChange }: PurchaseOrderDe
                     <tr key={item.id} className="border-t">
                       <td className="p-3 font-medium">{item.product_name}</td>
                       <td className="text-center p-3">{item.quantity}</td>
-                      <td className="text-right p-3">{formatCurrency(item.cost_per_unit)}</td>
-                      <td className="text-right p-3 font-medium">{formatCurrency(item.total_cost)}</td>
+                      <td className="text-right p-3">
+                        <MonetaryValue value={Number(item.cost_per_unit)} type="cost" />
+                      </td>
+                      <td className="text-right p-3">
+                        <MonetaryValue value={Number(item.total_cost)} type="cost" />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -117,7 +132,7 @@ export function PurchaseOrderDetails({ po, open, onOpenChange }: PurchaseOrderDe
 
           <div className="flex justify-between items-center p-4 bg-muted/50 rounded-lg">
             <span className="text-lg font-semibold">Total Cost</span>
-            <span className="text-2xl font-bold">{formatCurrency(po.total_cost)}</span>
+            <MonetaryValue value={Number(po.total_cost)} type="cost" className="text-2xl" />
           </div>
 
           <div className="flex gap-2">

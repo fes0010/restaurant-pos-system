@@ -29,14 +29,15 @@ export interface Product {
   name: string;
   description: string;
   category: string;
-  price: number;
-  cost: number;
+  price: number | null; // Nullable for variable-priced products
+  cost: number | null; // Nullable for variable-priced products
   base_unit: string;
   purchase_unit: string;
   unit_conversion_ratio: number;
   stock_quantity: number;
   low_stock_threshold: number;
   is_archived: boolean;
+  is_variable_price: boolean; // New field for variable pricing
   image_url: string | null;
   created_at: string;
   updated_at: string;

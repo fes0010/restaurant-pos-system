@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { SemanticBadge } from '@/components/ui/semantic-badge'
+import { MonetaryValue } from '@/components/ui/value-display'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { PurchaseOrderForm } from './PurchaseOrderForm'
 import { PurchaseOrderDetails } from './PurchaseOrderDetails'
@@ -26,12 +28,12 @@ export function PurchaseOrderList() {
     return `KES ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
-  const getStatusVariant = (status: string) => {
+  const getStatusVariant = (status: string): 'success' | 'pending' | 'info' | 'inactive' => {
     switch (status) {
-      case 'completed': return 'default'
-      case 'received': return 'default'
-      case 'ordered': return 'secondary'
-      default: return 'outline'
+      case 'completed': return 'success'
+      case 'received': return 'pending'
+      case 'ordered': return 'info'
+      default: return 'inactive' // draft
     }
   }
 
@@ -92,9 +94,11 @@ export function PurchaseOrderList() {
                       )}
                     </TableCell>
                     <TableCell>{format(new Date(po.expected_delivery_date), 'MMM dd, yyyy')}</TableCell>
-                    <TableCell className="text-right font-medium">{formatCurrency(po.total_cost)}</TableCell>
+                    <TableCell className="text-right">
+                      <MonetaryValue value={Number(po.total_cost)} type="cost" />
+                    </TableCell>
                     <TableCell>
-                      <Badge variant={getStatusVariant(po.status)}>{po.status}</Badge>
+                      <SemanticBadge variant={getStatusVariant(po.status)}>{po.status}</SemanticBadge>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" onClick={() => { setSelectedPO(po); setIsDetailsOpen(true) }}>

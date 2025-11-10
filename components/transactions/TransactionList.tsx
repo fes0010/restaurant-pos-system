@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { SemanticBadge } from '@/components/ui/semantic-badge'
+import { MonetaryValue } from '@/components/ui/value-display'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { TransactionDetails } from './TransactionDetails'
 import { exportToCSV, formatDateTimeForCSV } from '@/lib/utils/csv'
@@ -92,7 +94,7 @@ export function TransactionList() {
           'Transaction Total': Number(transaction.total).toFixed(2),
           'Payment Method': transaction.payment_method.toUpperCase(),
           'Status': transaction.status.replace('_', ' ').toUpperCase(),
-          'Served By': transaction.served_by_user?.full_name || 'N/A',
+          'Created By': transaction.created_by_user?.full_name || 'N/A',
         }))
       })
 
@@ -194,7 +196,7 @@ export function TransactionList() {
                   <TableHead>Transaction #</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Customer</TableHead>
-                  <TableHead>Served By</TableHead>
+                  <TableHead>Created By</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Payment</TableHead>
                   <TableHead>Status</TableHead>
@@ -214,19 +216,24 @@ export function TransactionList() {
                       {transaction.customer?.name || 'Walk-in'}
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">{transaction.served_by_user?.full_name || 'N/A'}</div>
-                      <div className="text-xs text-muted-foreground capitalize">{transaction.served_by_user?.role}</div>
+                      <div className="text-sm">{transaction.created_by_user?.full_name || 'N/A'}</div>
+                      <div className="text-xs text-muted-foreground capitalize">{transaction.created_by_user?.role}</div>
                     </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(transaction.total)}
+                    <TableCell className="text-right">
+                      <MonetaryValue 
+                        value={Number(transaction.total)} 
+                        type="revenue"
+                      />
                     </TableCell>
                     <TableCell>
                       <span className="capitalize">{transaction.payment_method}</span>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={transaction.status === 'completed' ? 'default' : 'secondary'}>
+                      <SemanticBadge 
+                        variant={transaction.status === 'completed' ? 'success' : 'pending'}
+                      >
                         {transaction.status.replace('_', ' ')}
-                      </Badge>
+                      </SemanticBadge>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button

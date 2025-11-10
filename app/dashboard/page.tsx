@@ -38,6 +38,7 @@ export default function DashboardPage() {
               change={kpis?.revenueChange}
               icon={DollarSign}
               loading={isLoading}
+              valueType="revenue"
             />
             <KPICard
               title="Total Profit"
@@ -45,6 +46,7 @@ export default function DashboardPage() {
               change={kpis?.profitChange}
               icon={TrendingUp}
               loading={isLoading}
+              valueType="profit"
             />
             <KPICard
               title="Total Sales"
@@ -52,12 +54,14 @@ export default function DashboardPage() {
               change={kpis?.salesChange}
               icon={ShoppingCart}
               loading={isLoading}
+              valueType="neutral"
             />
             <KPICard
               title="Low Stock Items"
               value={kpis?.lowStockCount?.toString() || '0'}
               icon={AlertTriangle}
               loading={isLoading}
+              valueType="neutral"
             />
           </div>
 

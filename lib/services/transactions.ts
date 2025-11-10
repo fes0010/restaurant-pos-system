@@ -41,7 +41,6 @@ export async function createTransaction(
       payment_method: input.payment_method,
       status: input.payment_method === 'debt' ? 'debt_pending' : 'completed',
       created_by: userId,
-      served_by: input.served_by || userId,
     } as any)
     .select()
     .single()
@@ -192,7 +191,7 @@ export async function getTransactions(
 
   if (error) throw error
 
-  // Fetch customers and served_by users for transactions
+  // Fetch customers and created_by users for transactions
   const transactionsWithDetails = await Promise.all(
     (data || []).map(async (transaction: any) => {
       const result: any = { ...transaction }
@@ -207,14 +206,14 @@ export async function getTransactions(
         result.customer = customer
       }
       
-      // Fetch served_by user if exists
-      if (transaction.served_by) {
-        const { data: servedByUser } = await supabase
+      // Fetch created_by user if exists
+      if (transaction.created_by) {
+        const { data: createdByUser } = await supabase
           .from('users')
           .select('*')
-          .eq('id', transaction.served_by)
+          .eq('id', transaction.created_by)
           .single()
-        result.served_by_user = servedByUser
+        result.created_by_user = createdByUser
       }
       
       return result
@@ -252,17 +251,72 @@ export async function getTransaction(id: string) {
     customer = customerData
   }
 
-  // Fetch served_by user if needed
-  let servedByUser = null
-  const dataWithServedBy = data as any
-  if (dataWithServedBy.served_by) {
+  // Fetch created_by user if needed
+  let createdByUser = null
+  const dataWithCreatedBy = data as any
+  if (dataWithCreatedBy.created_by) {
     const { data: userData } = await supabase
       .from('users')
       .select('*')
-      .eq('id', dataWithServedBy.served_by)
+      .eq('id', dataWithCreatedBy.created_by)
       .single()
-    servedByUser = userData
+    createdByUser = userData
   }
 
-  return { ...data, customer, served_by_user: servedByUser } as any
+  return { ...data, customer, created_by_user: createdByUser } as any
+}
+
+export async function createImmediateSale(
+  tenantId: string,
+  userId: string,
+  productId: string,
+  productName: string,
+  productSku: string,
+  customPrice: number,
+  customerId?: string
+) {
+  const supabase = createClient()
+
+  // Validate price
+  if (customPrice <= 0) {
+    throw new Error('Invalid price: must be greater than 0')
+  }
+
+  // Check stock availability
+  const { data: product, error: productError } = await supabase
+    .from('products')
+    .select('*')
+    .eq('id', productId)
+    .single()
+
+  if (productError) throw productError
+
+  if (!product?.is_variable_price) {
+    throw new Error('Product is not configured for variable pricing')
+  }
+
+  if (Number(product?.stock_quantity || 0) <= 0) {
+    throw new Error('Product is out of stock')
+  }
+
+  // Create transaction with single item
+  const transactionInput: CreateTransactionInput = {
+    customer_id: customerId,
+    served_by: userId,
+    items: [{
+      product_id: productId,
+      product_name: productName,
+      product_sku: productSku,
+      quantity: 1,
+      unit_price: customPrice,
+    }],
+    subtotal: customPrice,
+    discount_type: 'fixed',
+    discount_value: 0,
+    discount_amount: 0,
+    total: customPrice,
+    payment_method: 'cash', // Default to cash for immediate sales
+  }
+
+  return createTransaction(tenantId, userId, transactionInput)
 }

@@ -10,9 +10,10 @@ import { Search } from 'lucide-react'
 
 interface ProductCardGridProps {
   onAddToCart: (product: Product) => void
+  onImmediateSale?: (product: Product, customPrice: number) => void
 }
 
-export function ProductCardGrid({ onAddToCart }: ProductCardGridProps) {
+export function ProductCardGrid({ onAddToCart, onImmediateSale }: ProductCardGridProps) {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -57,6 +58,7 @@ export function ProductCardGrid({ onAddToCart }: ProductCardGridProps) {
                 key={product.id}
                 product={product}
                 onAddToCart={onAddToCart}
+                onImmediateSale={onImmediateSale}
               />
             ))}
           </div>

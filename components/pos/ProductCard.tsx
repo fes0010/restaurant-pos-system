@@ -10,14 +10,19 @@ import { cn } from '@/lib/utils'
 interface ProductCardProps {
   product: Product
   onAddToCart: (product: Product) => void
+  onImmediateSale?: (product: Product, customPrice: number) => void
 }
 
-export function ProductCard({ product, onAddToCart }: ProductCardProps) {
+export function ProductCard({ product, onAddToCart, onImmediateSale }: ProductCardProps) {
   const [imageError, setImageError] = useState(false)
   const [isPressed, setIsPressed] = useState(false)
+  const [customPrice, setCustomPrice] = useState<string>('')
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const isOutOfStock = Number(product.stock_quantity) <= 0
   const isLowStock = Number(product.stock_quantity) <= Number(product.low_stock_threshold)
+  const isVariablePrice = product.is_variable_price || false
+  const isPriceValid = customPrice && parseFloat(customPrice) > 0
 
   const formatCurrency = (value: number | string) => {
     return `KES ${Number(value).toLocaleString('en-KE', { 
@@ -27,10 +32,35 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   }
 
   const handleAddToCart = () => {
-    if (!isOutOfStock) {
+    if (!isOutOfStock && !isVariablePrice) {
       setIsPressed(true)
       onAddToCart(product)
       setTimeout(() => setIsPressed(false), 200)
+    }
+  }
+
+  const handleImmediateSale = async () => {
+    if (!isVariablePrice || !isPriceValid || !onImmediateSale || isOutOfStock) return
+    
+    setIsProcessing(true)
+    setIsPressed(true)
+    
+    try {
+      await onImmediateSale(product, parseFloat(customPrice))
+      setCustomPrice('') // Clear input after successful sale
+    } catch (error) {
+      // Error handling is done in parent component
+    } finally {
+      setIsProcessing(false)
+      setTimeout(() => setIsPressed(false), 200)
+    }
+  }
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    // Allow only numbers and decimal point
+    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+      setCustomPrice(value)
     }
   }
 
@@ -60,10 +90,12 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         'group relative flex flex-col bg-card border rounded-lg overflow-hidden transition-all duration-200',
         isOutOfStock 
           ? 'opacity-60 cursor-not-allowed' 
+          : isVariablePrice
+          ? 'hover:border-primary hover:shadow-md'
           : 'hover:border-primary hover:shadow-md cursor-pointer',
         isPressed && 'scale-95'
       )}
-      onClick={handleAddToCart}
+      onClick={!isVariablePrice ? handleAddToCart : undefined}
     >
       {/* Image Section */}
       <div className="relative w-full aspect-square bg-muted">
@@ -94,6 +126,13 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             Low Stock
           </div>
         )}
+        
+        {/* Variable Price Badge */}
+        {isVariablePrice && !isOutOfStock && !isLowStock && (
+          <div className="absolute top-2 left-2 bg-alert-warning text-alert-warning-foreground text-xs font-semibold px-2 py-1 rounded">
+            Enter Price
+          </div>
+        )}
       </div>
 
       {/* Content Section */}
@@ -105,10 +144,26 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
         {/* Price and Stock Info */}
         <div className="flex items-end justify-between mt-auto">
-          <div className="flex flex-col">
-            <span className="text-lg font-bold text-primary">
-              {formatCurrency(product.price)}
-            </span>
+          <div className="flex flex-col flex-1">
+            {isVariablePrice ? (
+              <div className="flex items-center space-x-1 mb-1">
+                <span className="text-sm font-medium text-muted-foreground">KES</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={customPrice}
+                  onChange={handlePriceChange}
+                  onClick={(e) => e.stopPropagation()}
+                  placeholder="0.00"
+                  disabled={isOutOfStock || isProcessing}
+                  className="flex-1 text-lg font-bold text-primary bg-transparent border-b-2 border-input focus:border-primary outline-none px-1 py-0.5 min-w-0"
+                />
+              </div>
+            ) : (
+              <span className="text-lg font-bold text-primary">
+                {formatCurrency(product.price || 0)}
+              </span>
+            )}
             <span className={cn(
               'text-xs',
               isOutOfStock 
@@ -124,16 +179,20 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             </span>
           </div>
 
-          {/* Add to Cart Button */}
+          {/* Action Button */}
           {!isOutOfStock && (
             <Button
               size="sm"
               className="h-11 w-11 rounded-full p-0 shrink-0"
               onClick={(e) => {
                 e.stopPropagation()
-                handleAddToCart()
+                if (isVariablePrice) {
+                  handleImmediateSale()
+                } else {
+                  handleAddToCart()
+                }
               }}
-              disabled={isOutOfStock}
+              disabled={isOutOfStock || (isVariablePrice && !isPriceValid) || isProcessing}
             >
               <Plus className="h-5 w-5" />
             </Button>

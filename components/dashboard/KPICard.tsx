@@ -1,5 +1,6 @@
 import { LucideIcon, TrendingUp, TrendingDown } from 'lucide-react'
 import { Card } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 interface KPICardProps {
   title: string
@@ -7,10 +8,18 @@ interface KPICardProps {
   change?: number
   icon: LucideIcon
   loading?: boolean
+  valueType?: 'revenue' | 'profit' | 'cost' | 'neutral'
 }
 
-export function KPICard({ title, value, change, icon: Icon, loading }: KPICardProps) {
+export function KPICard({ title, value, change, icon: Icon, loading, valueType = 'neutral' }: KPICardProps) {
   const isPositive = change !== undefined && change >= 0
+
+  const valueColorClasses = {
+    revenue: 'text-revenue',
+    profit: 'text-profit',
+    cost: 'text-cost',
+    neutral: 'text-foreground',
+  }
 
   return (
     <Card className="p-6">
@@ -26,15 +35,17 @@ export function KPICard({ title, value, change, icon: Icon, loading }: KPICardPr
         </div>
       ) : (
         <>
-          <p className="text-2xl font-bold mb-2">{value}</p>
+          <p className={cn('text-2xl font-bold mb-2', valueColorClasses[valueType])}>
+            {value}
+          </p>
           {change !== undefined && (
             <div className="flex items-center gap-1 text-xs">
               {isPositive ? (
-                <TrendingUp className="h-3 w-3 text-green-500" />
+                <TrendingUp className="h-3 w-3 text-profit" />
               ) : (
-                <TrendingDown className="h-3 w-3 text-red-500" />
+                <TrendingDown className="h-3 w-3 text-loss" />
               )}
-              <span className={isPositive ? 'text-green-500' : 'text-red-500'}>
+              <span className={isPositive ? 'text-profit' : 'text-loss'}>
                 {Math.abs(change).toFixed(1)}%
               </span>
               <span className="text-muted-foreground">from last period</span>

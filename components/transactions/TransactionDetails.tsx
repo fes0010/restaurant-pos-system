@@ -4,6 +4,8 @@ import { Transaction } from '@/types'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { SemanticBadge } from '@/components/ui/semantic-badge'
+import { MonetaryValue } from '@/components/ui/value-display'
 import { format } from 'date-fns'
 import { Printer, RotateCcw } from 'lucide-react'
 import { ReceiptPrint } from '@/components/pos/ReceiptPrint'
@@ -87,15 +89,15 @@ export function TransactionDetails({ transaction, open, onOpenChange }: Transact
                 <div className="font-medium capitalize">{displayTransaction.payment_method}</div>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Served By</div>
-                <div className="font-medium">{displayTransaction.served_by_user?.full_name || 'N/A'}</div>
-                <div className="text-xs text-muted-foreground capitalize">{displayTransaction.served_by_user?.role}</div>
+                <div className="text-sm text-muted-foreground">Created By</div>
+                <div className="font-medium">{displayTransaction.created_by_user?.full_name || 'N/A'}</div>
+                <div className="text-xs text-muted-foreground capitalize">{displayTransaction.created_by_user?.role}</div>
               </div>
               <div>
                 <div className="text-sm text-muted-foreground">Status</div>
-                <Badge variant={displayTransaction.status === 'completed' ? 'default' : 'secondary'}>
+                <SemanticBadge variant={displayTransaction.status === 'completed' ? 'success' : 'pending'}>
                   {displayTransaction.status.replace('_', ' ')}
-                </Badge>
+                </SemanticBadge>
               </div>
             </div>
 
@@ -139,19 +141,19 @@ export function TransactionDetails({ transaction, open, onOpenChange }: Transact
             <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>{formatCurrency(displayTransaction.subtotal)}</span>
+                <MonetaryValue value={Number(displayTransaction.subtotal)} type="neutral" />
               </div>
               {displayTransaction.discount_amount > 0 && (
-                <div className="flex justify-between text-sm text-green-600 dark:text-green-500">
-                  <span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">
                     Discount ({displayTransaction.discount_type === 'percentage' ? `${displayTransaction.discount_value}%` : 'Fixed'})
                   </span>
-                  <span>-{formatCurrency(displayTransaction.discount_amount)}</span>
+                  <MonetaryValue value={-Number(displayTransaction.discount_amount)} type="profit" showSign />
                 </div>
               )}
               <div className="flex justify-between text-lg font-bold pt-2 border-t">
                 <span>Total</span>
-                <span>{formatCurrency(displayTransaction.total)}</span>
+                <MonetaryValue value={Number(displayTransaction.total)} type="revenue" />
               </div>
             </div>
 

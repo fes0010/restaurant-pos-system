@@ -13,12 +13,15 @@ import { Button } from '@/components/ui/button'
 import { Product, Customer } from '@/types'
 import { Printer } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAuth } from '@/contexts/AuthContext'
+import { createImmediateSale } from '@/lib/services/transactions'
 
 const CART_STORAGE_KEY = 'pos-cart'
 const DISCOUNT_STORAGE_KEY = 'pos-discount'
 const CUSTOMER_STORAGE_KEY = 'pos-customer'
 
 export default function POSPage() {
+  const { user } = useAuth()
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [discount, setDiscount] = useState(0)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
@@ -116,6 +119,35 @@ export default function POSPage() {
     }, 2000)
   }
 
+  const handleImmediateSale = async (product: Product, customPrice: number) => {
+    if (!user) {
+      toast.error('User not authenticated')
+      return
+    }
+
+    try {
+      const transaction = await createImmediateSale(
+        user.tenant_id,
+        user.id,
+        product.id,
+        product.name,
+        product.sku,
+        customPrice,
+        selectedCustomer?.id
+      )
+
+      toast.success(`Sale completed: ${product.name} - KES ${customPrice.toFixed(2)}`)
+      
+      // Show receipt
+      setCompletedTransactionId(transaction.id)
+      setIsReceiptOpen(true)
+    } catch (error: any) {
+      console.error('Immediate sale error:', error)
+      toast.error(error.message || 'Failed to complete sale')
+      throw error // Re-throw to let ProductCard handle it
+    }
+  }
+
   // Cleanup timer on unmount
   useEffect(() => {
     return () => {
@@ -203,7 +235,10 @@ export default function POSPage() {
             </div>
 
             <div className="flex-1 overflow-hidden">
-              <ProductCardGrid onAddToCart={handleAddToCart} />
+              <ProductCardGrid 
+                onAddToCart={handleAddToCart}
+                onImmediateSale={handleImmediateSale}
+              />
             </div>
           </div>
         </div>
