@@ -97,15 +97,17 @@ export async function createUser(tenantId: string, data: CreateUserData) {
   if (authError) throw authError
   if (!authData.user) throw new Error('Failed to create user')
 
-  // The user record in the users table will be created automatically by the trigger
-  // Wait a moment for the trigger to complete
-  await new Promise(resolve => setTimeout(resolve, 500))
-
-  // Fetch the created user
+  // Manually create the user record in the users table
   const { data: userData, error: userError } = await supabase
     .from('users')
-    .select('*')
-    .eq('id', authData.user.id)
+    .insert({
+      id: authData.user.id,
+      tenant_id: tenantId,
+      email: data.email,
+      full_name: data.full_name,
+      role: data.role,
+    })
+    .select()
     .single()
 
   if (userError) throw userError
