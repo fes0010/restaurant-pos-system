@@ -92,6 +92,35 @@ Navigate to [http://localhost:3000](http://localhost:3000)
    - Create your first tenant and admin user
    - Login and start using the system
 
+## Installing as a PWA
+
+This app is installable as a Progressive Web App on any device:
+
+### Desktop (Chrome, Edge, Brave)
+1. Visit the deployed app URL
+2. Look for the install icon (⊕) in the address bar
+3. Click "Install" in the prompt
+4. The app will open in its own window
+
+### Mobile (iOS Safari)
+1. Open the app in Safari
+2. Tap the Share button (square with arrow)
+3. Scroll down and tap "Add to Home Screen"
+4. Confirm and the app will appear on your home screen
+
+### Mobile (Android Chrome)
+1. Open the app in Chrome
+2. Tap the three-dot menu
+3. Select "Install app" or "Add to Home Screen"
+4. Confirm installation
+
+### Benefits of Installing
+- Works offline after first load
+- Faster loading with cached assets
+- App-like experience with no browser UI
+- Quick access from home screen/desktop
+- Automatic updates when online
+
 ## Project Structure
 
 ```
