@@ -87,6 +87,11 @@ export function TransactionDetails({ transaction, open, onOpenChange }: Transact
                 <div className="font-medium capitalize">{displayTransaction.payment_method}</div>
               </div>
               <div>
+                <div className="text-sm text-muted-foreground">Served By</div>
+                <div className="font-medium">{displayTransaction.served_by_user?.full_name || 'N/A'}</div>
+                <div className="text-xs text-muted-foreground capitalize">{displayTransaction.served_by_user?.role}</div>
+              </div>
+              <div>
                 <div className="text-sm text-muted-foreground">Status</div>
                 <Badge variant={displayTransaction.status === 'completed' ? 'default' : 'secondary'}>
                   {displayTransaction.status.replace('_', ' ')}

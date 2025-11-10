@@ -92,6 +92,7 @@ export function TransactionList() {
           'Transaction Total': Number(transaction.total).toFixed(2),
           'Payment Method': transaction.payment_method.toUpperCase(),
           'Status': transaction.status.replace('_', ' ').toUpperCase(),
+          'Served By': transaction.served_by_user?.full_name || 'N/A',
         }))
       })
 
@@ -193,6 +194,7 @@ export function TransactionList() {
                   <TableHead>Transaction #</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Customer</TableHead>
+                  <TableHead>Served By</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Payment</TableHead>
                   <TableHead>Status</TableHead>
@@ -210,6 +212,10 @@ export function TransactionList() {
                     </TableCell>
                     <TableCell>
                       {transaction.customer?.name || 'Walk-in'}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">{transaction.served_by_user?.full_name || 'N/A'}</div>
+                      <div className="text-xs text-muted-foreground capitalize">{transaction.served_by_user?.role}</div>
                     </TableCell>
                     <TableCell className="text-right font-medium">
                       {formatCurrency(transaction.total)}

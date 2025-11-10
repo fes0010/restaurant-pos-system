@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CartItem } from './Cart'
 import { Customer } from '@/types'
 import { useCreateTransaction } from '@/hooks/useTransactions'
+import { useUsers } from '@/hooks/useUsers'
+import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
@@ -33,9 +35,12 @@ export function CheckoutModal({
   customer,
   onSuccess,
 }: CheckoutModalProps) {
+  const { user } = useAuth()
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'bank' | 'debt'>('cash')
   const [amountTendered, setAmountTendered] = useState<number>(total)
+  const [servedBy, setServedBy] = useState<string>(user?.id || '')
   const createTransaction = useCreateTransaction()
+  const { data: usersData } = useUsers()
 
   const change = paymentMethod === 'cash' ? Math.max(0, amountTendered - total) : 0
   const isValidPayment = paymentMethod !== 'cash' || amountTendered >= total
@@ -55,6 +60,7 @@ export function CheckoutModal({
       
       const transaction = await createTransaction.mutateAsync({
         customer_id: customer?.id,
+        served_by: servedBy,
         items: items.map((item) => ({
           product_id: item.product.id,
           product_name: item.product.name,
@@ -117,6 +123,23 @@ export function CheckoutModal({
               {customer.phone && <div className="text-sm text-muted-foreground">{customer.phone}</div>}
             </div>
           )}
+
+          {/* Served By */}
+          <div>
+            <Label htmlFor="served-by">Served By *</Label>
+            <Select value={servedBy} onValueChange={setServedBy}>
+              <SelectTrigger id="served-by">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {usersData?.users?.map((u: any) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.full_name} ({u.role})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Payment Method */}
           <div>

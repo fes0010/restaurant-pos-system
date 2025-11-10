@@ -3,6 +3,7 @@ import { Transaction, TransactionItem } from '@/types'
 
 export interface CreateTransactionInput {
   customer_id?: string
+  served_by?: string
   items: {
     product_id: string
     product_name: string
@@ -40,6 +41,7 @@ export async function createTransaction(
       payment_method: input.payment_method,
       status: input.payment_method === 'debt' ? 'debt_pending' : 'completed',
       created_by: userId,
+      served_by: input.served_by || userId,
     } as any)
     .select()
     .single()
@@ -190,23 +192,37 @@ export async function getTransactions(
 
   if (error) throw error
 
-  // Fetch customers for transactions that have customer_id
-  const transactionsWithCustomers = await Promise.all(
+  // Fetch customers and served_by users for transactions
+  const transactionsWithDetails = await Promise.all(
     (data || []).map(async (transaction: any) => {
+      const result: any = { ...transaction }
+      
+      // Fetch customer if exists
       if (transaction.customer_id) {
         const { data: customer } = await supabase
           .from('customers')
           .select('*')
           .eq('id', transaction.customer_id)
           .single()
-        return { ...transaction, customer }
+        result.customer = customer
       }
-      return transaction
+      
+      // Fetch served_by user if exists
+      if (transaction.served_by) {
+        const { data: servedByUser } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', transaction.served_by)
+          .single()
+        result.served_by_user = servedByUser
+      }
+      
+      return result
     })
   )
 
   return {
-    transactions: transactionsWithCustomers as any,
+    transactions: transactionsWithDetails as any,
     total: count ?? 0,
     page,
     pageSize,
@@ -236,5 +252,17 @@ export async function getTransaction(id: string) {
     customer = customerData
   }
 
-  return { ...data, customer } as any
+  // Fetch served_by user if needed
+  let servedByUser = null
+  const dataWithServedBy = data as any
+  if (dataWithServedBy.served_by) {
+    const { data: userData } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', dataWithServedBy.served_by)
+      .single()
+    servedByUser = userData
+  }
+
+  return { ...data, customer, served_by_user: servedByUser } as any
 }

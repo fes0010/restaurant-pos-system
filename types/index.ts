@@ -69,6 +69,8 @@ export interface Transaction {
   status: 'completed' | 'debt_pending';
   created_at: string;
   created_by: string;
+  served_by: string;
+  served_by_user?: User;
   items: TransactionItem[];
 }
 
