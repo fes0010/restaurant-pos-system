@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { createClient } from '@/lib/supabase/client'
 import {
   getTransactions,
   getTransaction,
@@ -15,13 +17,50 @@ export function useTransactions(filters?: {
   page?: number
   pageSize?: number
 }) {
-  const { tenant } = useAuth()
+  const { tenant, user } = useAuth()
+  const queryClient = useQueryClient()
+  const supabase = createClient()
 
-  return useQuery({
-    queryKey: ['transactions', tenant?.id, filters],
-    queryFn: () => getTransactions(tenant!.id, filters),
+  // For sales persons, automatically filter by their user ID
+  // RLS will enforce this, but we add it here for clarity
+  const enhancedFilters = {
+    ...filters,
+    userId: user?.role === 'sales_person' ? user.id : undefined,
+  }
+
+  const query = useQuery({
+    queryKey: ['transactions', tenant?.id, enhancedFilters],
+    queryFn: () => getTransactions(tenant!.id, enhancedFilters),
     enabled: !!tenant,
   })
+
+  // Subscribe to realtime changes
+  useEffect(() => {
+    if (!tenant?.id) return
+
+    const channel = supabase
+      .channel('transactions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `tenant_id=eq.${tenant.id}`,
+        },
+        () => {
+          // Invalidate and refetch transactions when any change occurs
+          queryClient.invalidateQueries({ queryKey: ['transactions', tenant.id] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [tenant?.id, queryClient, supabase])
+
+  return query
 }
 
 export function useTransaction(id: string) {

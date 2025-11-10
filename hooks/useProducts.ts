@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { createClient } from '@/lib/supabase/client'
 import {
   getProducts,
   getProduct,
@@ -20,12 +22,42 @@ export function useProducts(filters?: {
   pageSize?: number
 }) {
   const { tenant } = useAuth()
+  const queryClient = useQueryClient()
+  const supabase = createClient()
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['products', tenant?.id, filters],
     queryFn: () => getProducts(tenant!.id, filters),
     enabled: !!tenant,
   })
+
+  // Subscribe to realtime changes
+  useEffect(() => {
+    if (!tenant?.id) return
+
+    const channel = supabase
+      .channel('products-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'products',
+          filter: `tenant_id=eq.${tenant.id}`,
+        },
+        () => {
+          // Invalidate and refetch products when any change occurs
+          queryClient.invalidateQueries({ queryKey: ['products', tenant.id] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [tenant?.id, queryClient, supabase])
+
+  return query
 }
 
 export function useProduct(id: string) {

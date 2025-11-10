@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -23,6 +23,7 @@ type SetupFormData = z.infer<typeof setupSchema>
 
 export default function SetupPage() {
   const [isLoading, setIsLoading] = useState(false)
+  const [isChecking, setIsChecking] = useState(true)
   const router = useRouter()
   const supabase = createClient()
 
@@ -33,6 +34,30 @@ export default function SetupPage() {
   } = useForm<SetupFormData>({
     resolver: zodResolver(setupSchema),
   })
+
+  // Check if setup is already complete
+  useEffect(() => {
+    async function checkSetup() {
+      try {
+        const { count } = await supabase
+          .from('tenants')
+          .select('*', { count: 'exact', head: true })
+
+        if (count && count > 0) {
+          // Setup already complete, redirect to login
+          toast.info('Setup already completed. Please login.')
+          router.push('/login')
+          return
+        }
+      } catch (error) {
+        console.error('Error checking setup:', error)
+      } finally {
+        setIsChecking(false)
+      }
+    }
+
+    checkSetup()
+  }, [supabase, router])
 
   async function onSubmit(data: SetupFormData) {
     setIsLoading(true)
@@ -116,12 +141,24 @@ export default function SetupPage() {
     }
   }
 
+  if (isChecking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Checking setup status...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold">Welcome to Restaurant POS</h1>
           <p className="mt-2 text-muted-foreground">Set up your business account</p>
+          <p className="mt-1 text-xs text-amber-600">⚠️ First-time setup only. Contact admin to create additional users.</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">

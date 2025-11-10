@@ -32,38 +32,21 @@ export async function getUsers(
     pageSize?: number
   }
 ) {
-  const supabase = createClient()
+  // Use API route to bypass RLS
+  const params = new URLSearchParams()
+  if (filters?.role) params.append('role', filters.role)
+  if (filters?.search) params.append('search', filters.search)
+  if (filters?.page) params.append('page', filters.page.toString())
+  if (filters?.pageSize) params.append('pageSize', filters.pageSize.toString())
+
+  const response = await fetch(`/api/users?${params.toString()}`)
   
-  const page = filters?.page || 1
-  const pageSize = filters?.pageSize || 20
-  const from = (page - 1) * pageSize
-  const to = from + pageSize - 1
-
-  let query = supabase
-    .from('users')
-    .select('*', { count: 'exact' })
-    .eq('tenant_id', tenantId)
-    .order('created_at', { ascending: false })
-
-  if (filters?.role) {
-    query = query.eq('role', filters.role)
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to fetch users')
   }
 
-  if (filters?.search) {
-    query = query.or(`full_name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`)
-  }
-
-  const { data, error, count } = await query.range(from, to)
-
-  if (error) throw error
-
-  return {
-    users: data as User[],
-    total: count ?? 0,
-    page,
-    pageSize,
-    totalPages: Math.ceil((count ?? 0) / pageSize),
-  }
+  return response.json()
 }
 
 export async function getUserById(userId: string) {
@@ -80,38 +63,20 @@ export async function getUserById(userId: string) {
 }
 
 export async function createUser(tenantId: string, data: CreateUserData) {
-  const supabase = createClient()
-  
-  // Create auth user using admin API (bypasses email confirmation)
-  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-    email: data.email,
-    password: data.password,
-    email_confirm: true, // Auto-confirm email
-    user_metadata: {
-      full_name: data.full_name,
-      tenant_id: tenantId,
-      role: data.role,
+  const response = await fetch('/api/users', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify(data),
   })
 
-  if (authError) throw authError
-  if (!authData.user) throw new Error('Failed to create user')
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to create user')
+  }
 
-  // Manually create the user record in the users table
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .insert({
-      id: authData.user.id,
-      tenant_id: tenantId,
-      email: data.email,
-      full_name: data.full_name,
-      role: data.role,
-    })
-    .select()
-    .single()
-
-  if (userError) throw userError
-  return userData as User
+  return response.json() as Promise<User>
 }
 
 export async function updateUser(userId: string, data: UpdateUserData) {
@@ -129,41 +94,29 @@ export async function updateUser(userId: string, data: UpdateUserData) {
 }
 
 export async function deleteUser(userId: string) {
-  const supabase = createClient()
-  
-  // Check if this is the last admin
-  const { data: user } = await supabase
-    .from('users')
-    .select('tenant_id, role')
-    .eq('id', userId)
-    .single()
+  const response = await fetch(`/api/users/${userId}`, {
+    method: 'DELETE',
+  })
 
-  if (user?.role === 'admin') {
-    const { count } = await supabase
-      .from('users')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', user.tenant_id)
-      .eq('role', 'admin')
-
-    if (count === 1) {
-      throw new Error('Cannot delete the last admin user')
-    }
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to delete user')
   }
-
-  // Delete from auth (this will cascade to users table via trigger)
-  const { error } = await supabase.auth.admin.deleteUser(userId)
-  
-  if (error) throw error
 }
 
 export async function changeUserPassword(userId: string, newPassword: string) {
-  const supabase = createClient()
-  
-  const { error } = await supabase.auth.admin.updateUserById(userId, {
-    password: newPassword,
+  const response = await fetch(`/api/users/${userId}/password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ newPassword }),
   })
 
-  if (error) throw error
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to change password')
+  }
 }
 
 export async function changeOwnPassword(currentPassword: string, newPassword: string) {

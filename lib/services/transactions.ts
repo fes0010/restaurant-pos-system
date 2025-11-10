@@ -151,6 +151,7 @@ export async function getTransactions(
     search?: string
     page?: number
     pageSize?: number
+    userId?: string // Optional: filter by specific user (for sales persons)
   }
 ) {
   const supabase = createClient()
@@ -160,6 +161,11 @@ export async function getTransactions(
     .select('*', { count: 'exact' })
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
+
+  // Filter by user if provided (RLS will also enforce this for sales persons)
+  if (filters?.userId) {
+    query = query.eq('created_by', filters.userId)
+  }
 
   // Apply date filters
   if (filters?.dateFrom) {
