@@ -82,16 +82,15 @@ export async function getUserById(userId: string) {
 export async function createUser(tenantId: string, data: CreateUserData) {
   const supabase = createClient()
   
-  // Create auth user
-  const { data: authData, error: authError } = await supabase.auth.signUp({
+  // Create auth user using admin API (bypasses email confirmation)
+  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email: data.email,
     password: data.password,
-    options: {
-      data: {
-        full_name: data.full_name,
-        tenant_id: tenantId,
-        role: data.role,
-      },
+    email_confirm: true, // Auto-confirm email
+    user_metadata: {
+      full_name: data.full_name,
+      tenant_id: tenantId,
+      role: data.role,
     },
   })
 
