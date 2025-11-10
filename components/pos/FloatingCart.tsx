@@ -42,7 +42,7 @@ export function FloatingCart({
   const cartRef = useRef<HTMLDivElement>(null)
 
   const formatCurrency = (value: number) => {
-    return `KES ${value.toLocaleString('en-KE', { 
+    return `KSH ${value.toLocaleString('en-KE', { 
       minimumFractionDigits: 2, 
       maximumFractionDigits: 2 
     })}`
@@ -137,7 +137,7 @@ export function FloatingCart({
             </div>
             {total > 0 && (
               <span className="text-[10px] sm:text-xs font-semibold mt-1 text-center">
-                {formatCurrency(total).replace('KES ', '')}
+                {formatCurrency(total).replace('KSH ', '')}
               </span>
             )}
           </button>

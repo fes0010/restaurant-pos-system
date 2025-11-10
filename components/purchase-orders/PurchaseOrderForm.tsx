@@ -183,7 +183,7 @@ export function PurchaseOrderForm({ po, open, onOpenChange }: PurchaseOrderFormP
                     />
                   </div>
                   <div className="w-32 text-right font-medium">
-                    KES {(item.quantity * item.cost_per_unit).toFixed(2)}
+                    KSH {(item.quantity * item.cost_per_unit).toFixed(2)}
                   </div>
                   <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(index)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -195,7 +195,7 @@ export function PurchaseOrderForm({ po, open, onOpenChange }: PurchaseOrderFormP
             {items.length > 0 && (
               <div className="flex justify-end pt-2 border-t mt-2">
                 <div className="text-lg font-bold">
-                  Total: KES {totalCost.toFixed(2)}
+                  Total: KSH {totalCost.toFixed(2)}
                 </div>
               </div>
             )}

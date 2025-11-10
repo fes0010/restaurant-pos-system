@@ -32,7 +32,7 @@ export function Cart({
   onCheckout,
 }: CartProps) {
   const formatCurrency = (value: number) => {
-    return `KES ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    return `KSH ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   const subtotal = items.reduce((sum, item) => {

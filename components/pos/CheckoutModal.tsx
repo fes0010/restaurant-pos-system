@@ -46,7 +46,7 @@ export function CheckoutModal({
   const isValidPayment = paymentMethod !== 'cash' || amountTendered >= total
 
   const formatCurrency = (value: number) => {
-    return `KES ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    return `KSH ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   const handleCheckout = async () => {

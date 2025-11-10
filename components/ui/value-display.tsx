@@ -17,7 +17,7 @@ export function MonetaryValue({ value, type, showSign = false, className }: Mone
   }
 
   const formatValue = (val: number) => {
-    const formatted = `KES ${Math.abs(val).toLocaleString('en-KE', { 
+    const formatted = `KSH ${Math.abs(val).toLocaleString('en-KE', { 
       minimumFractionDigits: 2, 
       maximumFractionDigits: 2 
     })}`

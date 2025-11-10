@@ -125,7 +125,7 @@ export function ProductList() {
   }
 
   const formatCurrency = (value: number | string) => {
-    return `KES ${Number(value).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    return `KSH ${Number(value).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   const getStockStatus = (product: Product) => {
@@ -140,7 +140,7 @@ export function ProductList() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold">
             {showArchived ? 'Archived Products' : 'Products'}
@@ -149,32 +149,33 @@ export function ProductList() {
             {data?.total || 0} total {showArchived ? 'archived ' : ''}products
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button 
-            variant={showArchived ? "default" : "outline"} 
+            variant={showArchived ? "default" : "outline"}
+            size="sm"
             onClick={() => {
               setShowArchived(!showArchived)
               setPage(1)
             }}
           >
-            <Archive className="h-4 w-4 mr-2" />
-            {showArchived ? 'View Active' : 'View Archived'}
+            <Archive className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{showArchived ? 'View Active' : 'View Archived'}</span>
           </Button>
-          <Button variant="outline" onClick={handleExportCSV} disabled={!data?.products?.length}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
+          <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={!data?.products?.length}>
+            <Download className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Export CSV</span>
           </Button>
           {!showArchived && (
-            <Button onClick={handleCreateNew}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
+            <Button size="sm" onClick={handleCreateNew}>
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Add Product</span>
             </Button>
           )}
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -191,7 +192,7 @@ export function ProductList() {
           setCategory(value)
           setPage(1)
         }}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
@@ -218,7 +219,7 @@ export function ProductList() {
         </div>
       ) : (
         <>
-          <div className="border rounded-lg">
+          <div className="border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

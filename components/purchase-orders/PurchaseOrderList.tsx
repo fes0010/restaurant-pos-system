@@ -25,7 +25,7 @@ export function PurchaseOrderList() {
   const { data, isLoading } = usePurchaseOrders({ status: status === 'all' ? undefined : status, page, pageSize })
 
   const formatCurrency = (value: number) => {
-    return `KES ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    return `KSH ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   const getStatusVariant = (status: string): 'success' | 'pending' | 'info' | 'inactive' => {

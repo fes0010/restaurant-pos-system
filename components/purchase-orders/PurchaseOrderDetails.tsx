@@ -21,7 +21,7 @@ export function PurchaseOrderDetails({ po, open, onOpenChange }: PurchaseOrderDe
   const restock = useRestockFromPurchaseOrder()
 
   const formatCurrency = (value: number) => {
-    return `KES ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    return `KSH ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   const handleStatusChange = async (newStatus: any) => {

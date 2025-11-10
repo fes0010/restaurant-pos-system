@@ -98,7 +98,7 @@ export function CustomerSelector({ selectedCustomer, onSelectCustomer }: Custome
       {selectedCustomer && (
         <div className="text-sm text-muted-foreground">
           {selectedCustomer.email && <div>Email: {selectedCustomer.email}</div>}
-          <div>Total purchases: KES {Number(selectedCustomer.total_purchases).toLocaleString()}</div>
+          <div>Total purchases: KSH {Number(selectedCustomer.total_purchases).toLocaleString()}</div>
         </div>
       )}
 
@@ -216,7 +216,7 @@ function CustomerHistoryModal({ customer, open, onOpenChange }: CustomerHistoryM
   const { data: transactions = [], isLoading } = useCustomerTransactions(customer.id)
 
   const formatCurrency = (value: number) => {
-    return `KES ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    return `KSH ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   return (

@@ -25,7 +25,7 @@ export function ProductCard({ product, onAddToCart, onImmediateSale }: ProductCa
   const isPriceValid = customPrice && parseFloat(customPrice) > 0
 
   const formatCurrency = (value: number | string) => {
-    return `KES ${Number(value).toLocaleString('en-KE', { 
+    return `KSH ${Number(value).toLocaleString('en-KE', { 
       minimumFractionDigits: 2, 
       maximumFractionDigits: 2 
     })}`

@@ -107,7 +107,7 @@ export function TransactionList() {
   }
 
   const formatCurrency = (value: number | string) => {
-    return `KES ${Number(value).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    return `KSH ${Number(value).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   return (
