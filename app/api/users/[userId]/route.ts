@@ -3,7 +3,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -25,7 +25,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Only admins can delete users' }, { status: 403 })
     }
 
-    const userId = params.userId
+    const { userId } = await params
 
     // Check if this is the last admin
     const { data: userToDelete } = await supabase

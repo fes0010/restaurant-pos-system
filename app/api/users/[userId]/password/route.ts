@@ -3,7 +3,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -35,7 +35,7 @@ export async function POST(
       )
     }
 
-    const userId = params.userId
+    const { userId } = await params
 
     // Use admin client for auth operations
     const adminClient = createAdminClient()
