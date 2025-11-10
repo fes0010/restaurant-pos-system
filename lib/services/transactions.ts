@@ -156,9 +156,14 @@ export async function getTransactions(
 ) {
   const supabase = createClient()
 
+  // Use a single query with joins for better performance
   let query = supabase
     .from('transactions')
-    .select('*', { count: 'exact' })
+    .select(`
+      *,
+      customer:customers(*),
+      created_by_user:users!created_by(id, full_name, email, role)
+    `, { count: 'exact' })
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
 
@@ -197,37 +202,8 @@ export async function getTransactions(
 
   if (error) throw error
 
-  // Fetch customers and created_by users for transactions
-  const transactionsWithDetails = await Promise.all(
-    (data || []).map(async (transaction: any) => {
-      const result: any = { ...transaction }
-      
-      // Fetch customer if exists
-      if (transaction.customer_id) {
-        const { data: customer } = await supabase
-          .from('customers')
-          .select('*')
-          .eq('id', transaction.customer_id)
-          .single()
-        result.customer = customer
-      }
-      
-      // Fetch created_by user if exists
-      if (transaction.created_by) {
-        const { data: createdByUser } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', transaction.created_by)
-          .single()
-        result.created_by_user = createdByUser
-      }
-      
-      return result
-    })
-  )
-
   return {
-    transactions: transactionsWithDetails as any,
+    transactions: data as any,
     total: count ?? 0,
     page,
     pageSize,
@@ -240,36 +216,18 @@ export async function getTransaction(id: string) {
 
   const { data, error } = await supabase
     .from('transactions')
-    .select('*, items:transaction_items(*)')
+    .select(`
+      *,
+      items:transaction_items(*),
+      customer:customers(*),
+      created_by_user:users!created_by(id, full_name, email, role)
+    `)
     .eq('id', id)
     .single()
 
   if (error) throw error
 
-  // Fetch customer separately if needed
-  let customer = null
-  if (data.customer_id) {
-    const { data: customerData } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('id', data.customer_id)
-      .single()
-    customer = customerData
-  }
-
-  // Fetch created_by user if needed
-  let createdByUser = null
-  const dataWithCreatedBy = data as any
-  if (dataWithCreatedBy.created_by) {
-    const { data: userData } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', dataWithCreatedBy.created_by)
-      .single()
-    createdByUser = userData
-  }
-
-  return { ...data, customer, created_by_user: createdByUser } as any
+  return data as any
 }
 
 export async function createImmediateSale(
