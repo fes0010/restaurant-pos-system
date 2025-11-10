@@ -10,12 +10,16 @@ import {
   UpdateCustomerInput,
 } from '@/lib/services/customers'
 
-export function useCustomers(search?: string) {
+export function useCustomers(filters?: {
+  search?: string
+  page?: number
+  pageSize?: number
+}) {
   const { tenant } = useAuth()
 
   return useQuery({
-    queryKey: ['customers', tenant?.id, search],
-    queryFn: () => getCustomers(tenant!.id, search),
+    queryKey: ['customers', tenant?.id, filters],
+    queryFn: () => getCustomers(tenant!.id, filters),
     enabled: !!tenant,
   })
 }

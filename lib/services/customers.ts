@@ -11,23 +11,45 @@ export interface UpdateCustomerInput extends Partial<CreateCustomerInput> {
   id: string
 }
 
-export async function getCustomers(tenantId: string, search?: string) {
+export async function getCustomers(
+  tenantId: string,
+  filters?: {
+    search?: string
+    page?: number
+    pageSize?: number
+  }
+) {
   const supabase = createClient()
   
   let query = supabase
     .from('customers')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('tenant_id', tenantId)
     .order('name', { ascending: true })
 
-  if (search) {
-    query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%,email.ilike.%${search}%`)
+  if (filters?.search) {
+    query = query.or(`name.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,email.ilike.%${filters.search}%`)
   }
 
-  const { data, error } = await query
+  // Apply pagination
+  const page = filters?.page ?? 1
+  const pageSize = filters?.pageSize ?? 50
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+  
+  query = query.range(from, to)
+
+  const { data, error, count } = await query
 
   if (error) throw error
-  return data as Customer[]
+  
+  return {
+    customers: data as Customer[],
+    total: count ?? 0,
+    page,
+    pageSize,
+    totalPages: Math.ceil((count ?? 0) / pageSize),
+  }
 }
 
 export async function getCustomer(id: string) {

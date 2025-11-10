@@ -31,7 +31,8 @@ export function CustomerSelector({ selectedCustomer, onSelectCustomer }: Custome
     return () => clearTimeout(timer)
   }, [search])
 
-  const { data: customers = [] } = useCustomers(debouncedSearch)
+  const { data: customersData } = useCustomers({ search: debouncedSearch })
+  const customers = customersData?.customers || []
 
   return (
     <div className="space-y-2">

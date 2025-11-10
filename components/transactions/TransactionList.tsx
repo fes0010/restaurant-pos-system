@@ -32,7 +32,7 @@ export function TransactionList() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
 
-  const pageSize = 20
+  const pageSize = 15
 
   // Calculate date filters based on range
   const getDateFilters = () => {

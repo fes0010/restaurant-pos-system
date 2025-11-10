@@ -48,9 +48,10 @@ export function useTransactions(filters?: {
           table: 'transactions',
           filter: `tenant_id=eq.${tenant.id}`,
         },
-        () => {
-          // Invalidate and refetch transactions when any change occurs
-          queryClient.invalidateQueries({ queryKey: ['transactions', tenant.id] })
+        (payload) => {
+          console.log('Transaction change detected:', payload)
+          // Invalidate all transaction queries for this tenant
+          queryClient.invalidateQueries({ queryKey: ['transactions'] })
         }
       )
       .subscribe()
