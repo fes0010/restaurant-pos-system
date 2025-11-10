@@ -132,7 +132,7 @@ export function UsersList() {
       ) : usersData?.users.length ? (
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {usersData.users.map((user) => (
+            {usersData.users.map((user: User) => (
               <Card key={user.id} className="p-4 hover:shadow-md transition-shadow">
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
