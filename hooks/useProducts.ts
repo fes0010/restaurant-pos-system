@@ -6,6 +6,7 @@ import {
   createProduct,
   updateProduct,
   archiveProduct,
+  restoreProduct,
   getCategories,
   CreateProductInput,
   UpdateProductInput,
@@ -66,6 +67,17 @@ export function useArchiveProduct() {
 
   return useMutation({
     mutationFn: (id: string) => archiveProduct(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+    },
+  })
+}
+
+export function useRestoreProduct() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => restoreProduct(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
     },

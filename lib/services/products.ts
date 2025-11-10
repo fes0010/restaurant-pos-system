@@ -6,13 +6,15 @@ export interface CreateProductInput {
   name: string
   description?: string
   category: string
-  price: number
-  cost: number
+  price: number | null
+  cost: number | null
   base_unit: string
   purchase_unit: string
   unit_conversion_ratio: number
   stock_quantity: number
   low_stock_threshold: number
+  is_variable_price?: boolean
+  image_url?: string | null
 }
 
 export interface UpdateProductInput extends Partial<CreateProductInput> {
@@ -82,13 +84,26 @@ export async function getProduct(id: string) {
 export async function createProduct(tenantId: string, userId: string, input: CreateProductInput) {
   const supabase = createClient()
   
+  // Validate price based on is_variable_price flag
+  if (!input.is_variable_price && (input.price === null || input.price === undefined)) {
+    throw new Error('Price is required for fixed-price products')
+  }
+  
+  // Prepare data, converting null to undefined for Supabase
+  const insertData: any = {
+    tenant_id: tenantId,
+    created_by: userId,
+    is_variable_price: input.is_variable_price ?? false,
+    ...input,
+  }
+  
+  // Convert null to undefined for optional fields
+  if (insertData.cost === null) delete insertData.cost
+  if (insertData.price === null) delete insertData.price
+  
   const { data, error } = await supabase
     .from('products')
-    .insert({
-      tenant_id: tenantId,
-      created_by: userId,
-      ...input,
-    })
+    .insert(insertData)
     .select()
     .single()
 
@@ -101,9 +116,21 @@ export async function updateProduct(input: UpdateProductInput) {
   
   const { id, ...updates } = input
   
+  // Validate price based on is_variable_price flag if being updated
+  if (updates.is_variable_price !== undefined) {
+    if (!updates.is_variable_price && (updates.price === null || updates.price === undefined)) {
+      throw new Error('Price is required for fixed-price products')
+    }
+  }
+  
+  // Prepare updates, converting null to undefined for Supabase
+  const updateData: any = { ...updates }
+  if (updateData.cost === null) delete updateData.cost
+  if (updateData.price === null) delete updateData.price
+  
   const { data, error } = await supabase
     .from('products')
-    .update(updates)
+    .update(updateData)
     .eq('id', id)
     .select()
     .single()
@@ -118,6 +145,20 @@ export async function archiveProduct(id: string) {
   const { data, error } = await supabase
     .from('products')
     .update({ is_archived: true })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as Product
+}
+
+export async function restoreProduct(id: string) {
+  const supabase = createClient()
+  
+  const { data, error } = await supabase
+    .from('products')
+    .update({ is_archived: false })
     .eq('id', id)
     .select()
     .single()

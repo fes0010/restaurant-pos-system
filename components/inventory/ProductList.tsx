@@ -1,13 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { useProducts, useCategories, useArchiveProduct } from '@/hooks/useProducts'
+import { useProducts, useCategories, useArchiveProduct, useRestoreProduct } from '@/hooks/useProducts'
 import { Product } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { SemanticBadge } from '@/components/ui/semantic-badge'
+import { MonetaryValue, StockDisplay } from '@/components/ui/value-display'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { ProductForm } from './ProductForm'
 import { StockAdjustmentModal } from './StockAdjustmentModal'
@@ -20,6 +22,7 @@ import {
   Download, 
   Edit, 
   Archive, 
+  ArchiveRestore,
   TrendingUp, 
   History,
   ChevronLeft,
@@ -30,6 +33,7 @@ export function ProductList() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<string>('all')
   const [page, setPage] = useState(1)
+  const [showArchived, setShowArchived] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isStockModalOpen, setIsStockModalOpen] = useState(false)
@@ -39,11 +43,13 @@ export function ProductList() {
   const { data, isLoading } = useProducts({ 
     search, 
     category: category === 'all' ? undefined : category,
+    archived: showArchived,
     page,
     pageSize
   })
   const { data: categories = [] } = useCategories()
   const archiveProduct = useArchiveProduct()
+  const restoreProduct = useRestoreProduct()
 
   const handleCreateNew = () => {
     setSelectedProduct(null)
@@ -73,6 +79,17 @@ export function ProductList() {
       toast.success('Product archived successfully')
     } catch (error: any) {
       toast.error(error.message || 'Failed to archive product')
+    }
+  }
+
+  const handleRestore = async (product: Product) => {
+    if (!confirm(`Are you sure you want to restore "${product.name}"?`)) return
+
+    try {
+      await restoreProduct.mutateAsync(product.id)
+      toast.success('Product restored successfully')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to restore product')
     }
   }
 
@@ -115,9 +132,9 @@ export function ProductList() {
     const stock = Number(product.stock_quantity)
     const threshold = Number(product.low_stock_threshold)
     
-    if (stock === 0) return { label: 'Out of Stock', variant: 'destructive' as const }
-    if (stock <= threshold) return { label: 'Low Stock', variant: 'secondary' as const }
-    return { label: 'In Stock', variant: 'default' as const }
+    if (stock === 0) return { label: 'Out of Stock', variant: 'stock-out' as const }
+    if (stock <= threshold) return { label: 'Low Stock', variant: 'stock-low' as const }
+    return { label: 'In Stock', variant: 'stock-in' as const }
   }
 
   return (
@@ -125,20 +142,34 @@ export function ProductList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Products</h2>
+          <h2 className="text-xl font-semibold">
+            {showArchived ? 'Archived Products' : 'Products'}
+          </h2>
           <p className="text-sm text-muted-foreground">
-            {data?.total || 0} total products
+            {data?.total || 0} total {showArchived ? 'archived ' : ''}products
           </p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant={showArchived ? "default" : "outline"} 
+            onClick={() => {
+              setShowArchived(!showArchived)
+              setPage(1)
+            }}
+          >
+            <Archive className="h-4 w-4 mr-2" />
+            {showArchived ? 'View Active' : 'View Archived'}
+          </Button>
           <Button variant="outline" onClick={handleExportCSV} disabled={!data?.products?.length}>
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
-          <Button onClick={handleCreateNew}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
-          </Button>
+          {!showArchived && (
+            <Button onClick={handleCreateNew}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
+            </Button>
+          )}
         </div>
       </div>
 
@@ -208,7 +239,19 @@ export function ProductList() {
                       <TableCell className="font-mono text-sm">{product.sku}</TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{product.name}</div>
+                          <div className="font-medium">
+                            {product.name}
+                            {showArchived && (
+                              <SemanticBadge variant="neutral" className="ml-2 text-xs">
+                                Archived
+                              </SemanticBadge>
+                            )}
+                            {product.is_variable_price && (
+                              <SemanticBadge variant="warning" className="ml-2 text-xs">
+                                Variable Price
+                              </SemanticBadge>
+                            )}
+                          </div>
                           {product.description && (
                             <div className="text-sm text-muted-foreground line-clamp-1">
                               {product.description}
@@ -217,47 +260,80 @@ export function ProductList() {
                         </div>
                       </TableCell>
                       <TableCell>{product.category}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(product.price)}</TableCell>
                       <TableCell className="text-right">
-                        {Number(product.stock_quantity).toFixed(2)} {product.base_unit}
+                        {product.is_variable_price ? (
+                          <span className="text-muted-foreground italic">Set at POS</span>
+                        ) : (
+                          <MonetaryValue value={Number(product.price)} type="revenue" />
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <StockDisplay
+                          quantity={Number(product.stock_quantity)}
+                          threshold={Number(product.low_stock_threshold)}
+                          unit={product.base_unit}
+                        />
                       </TableCell>
                       <TableCell>
-                        <Badge variant={stockStatus.variant}>{stockStatus.label}</Badge>
+                        <SemanticBadge variant={stockStatus.variant}>{stockStatus.label}</SemanticBadge>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(product)}
-                            title="Edit product"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleStockAdjustment(product)}
-                            title="Adjust stock"
-                          >
-                            <TrendingUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewHistory(product)}
-                            title="View history"
-                          >
-                            <History className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleArchive(product)}
-                            title="Archive product"
-                          >
-                            <Archive className="h-4 w-4" />
-                          </Button>
+                          {showArchived ? (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewHistory(product)}
+                                title="View history"
+                              >
+                                <History className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRestore(product)}
+                                title="Restore product"
+                              >
+                                <ArchiveRestore className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(product)}
+                                title="Edit product"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleStockAdjustment(product)}
+                                title="Adjust stock"
+                              >
+                                <TrendingUp className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewHistory(product)}
+                                title="View history"
+                              >
+                                <History className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleArchive(product)}
+                                title="Archive product"
+                              >
+                                <Archive className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
