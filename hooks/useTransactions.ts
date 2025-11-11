@@ -32,6 +32,8 @@ export function useTransactions(filters?: {
     queryKey: ['transactions', tenant?.id, enhancedFilters],
     queryFn: () => getTransactions(tenant!.id, enhancedFilters),
     enabled: !!tenant,
+    staleTime: 0, // Always consider data stale for immediate refetches
+    refetchOnMount: 'always', // Always refetch on mount
   })
 
   // Subscribe to realtime changes
@@ -79,11 +81,15 @@ export function useCreateTransaction() {
   return useMutation({
     mutationFn: (input: CreateTransactionInput) =>
       createTransaction(tenant!.id, user!.id, input),
-    onSuccess: () => {
+    onSuccess: (newTransaction) => {
+      // Immediately invalidate queries to refetch with the new transaction
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['products'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['customers'] })
+      
+      // Force immediate refetch of transaction queries
+      queryClient.refetchQueries({ queryKey: ['transactions'], type: 'active' })
     },
   })
 }
