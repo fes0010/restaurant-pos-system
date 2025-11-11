@@ -11,14 +11,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get current user's tenant_id
-    const { data: currentUser } = await supabase
+    // Use admin client to get current user's tenant_id (bypasses RLS)
+    const adminClient = createAdminClient()
+    const { data: currentUser, error: userError } = await adminClient
       .from('users')
-      .select('tenant_id')
+      .select('tenant_id, role')
       .eq('id', user.id)
       .single()
 
-    if (!currentUser) {
+    if (userError || !currentUser) {
+      console.error('Error fetching current user:', userError)
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
@@ -31,9 +33,7 @@ export async function GET(request: NextRequest) {
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
 
-    // Use admin client to fetch all users in tenant (bypasses RLS)
-    const adminClient = createAdminClient()
-    
+    // Fetch all users in tenant using admin client (bypasses RLS)
     let query = adminClient
       .from('users')
       .select('*', { count: 'exact' })
@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await query.range(from, to)
 
     if (error) {
+      console.error('Error fetching users list:', error)
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
       totalPages: Math.ceil((count ?? 0) / pageSize),
     })
   } catch (error: any) {
-    console.error('Error fetching users:', error)
+    console.error('Error in GET /api/users:', error)
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }
@@ -77,14 +78,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get current user's role
-    const { data: currentUser } = await supabase
+    // Use admin client to get current user's role (bypasses RLS)
+    const adminClient = createAdminClient()
+    const { data: currentUser, error: userError } = await adminClient
       .from('users')
       .select('role, tenant_id')
       .eq('id', user.id)
       .single()
 
-    if (!currentUser || currentUser.role !== 'admin') {
+    if (userError || !currentUser || currentUser.role !== 'admin') {
+      console.error('Error fetching current user or not admin:', userError)
       return NextResponse.json({ error: 'Only admins can create users' }, { status: 403 })
     }
 
@@ -95,9 +98,6 @@ export async function POST(request: NextRequest) {
     if (!email || !password || !full_name || !role) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
-
-    // Use admin client for auth operations
-    const adminClient = createAdminClient()
 
     // Create auth user using admin API
     const { data: authData, error: authError2 } = await adminClient.auth.admin.createUser({
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user record in users table using admin client (bypasses RLS)
-    const { data: userData, error: userError } = await adminClient
+    const { data: userData, error: insertError } = await adminClient
       .from('users')
       .insert({
         id: authData.user.id,
@@ -132,10 +132,10 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    if (userError) {
+    if (insertError) {
       // Rollback: delete the auth user
       await adminClient.auth.admin.deleteUser(authData.user.id)
-      return NextResponse.json({ error: userError.message }, { status: 400 })
+      return NextResponse.json({ error: insertError.message }, { status: 400 })
     }
 
     return NextResponse.json(userData, { status: 201 })
