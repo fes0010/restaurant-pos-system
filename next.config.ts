@@ -5,7 +5,6 @@ import withPWA from "next-pwa";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: 'standalone',
-  turbopack: {}, // Empty config to silence Turbopack warning
   images: {
     remotePatterns: [
       {
@@ -15,6 +14,14 @@ const nextConfig: NextConfig = {
         pathname: '/storage/v1/object/public/**',
       },
     ],
+  },
+  // Optimize build performance
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+  // Reduce memory usage during build
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'recharts', 'date-fns'],
   },
 };
 

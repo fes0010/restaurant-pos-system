@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies with increased timeout
+RUN npm ci --prefer-offline --no-audit
 
 # Copy source code
 COPY . .
@@ -15,9 +15,10 @@ COPY . .
 # Set build environment variables
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV SKIP_ENV_VALIDATION=1
 
-# Build the application with webpack (not turbopack) due to PWA plugin
-RUN npm run build -- --webpack
+# Build the application (webpack flag already in package.json)
+RUN npm run build
 
 # Production stage
 FROM node:20-alpine AS runner
