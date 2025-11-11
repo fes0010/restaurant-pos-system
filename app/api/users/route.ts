@@ -3,11 +3,20 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
+    // Check if service role key is configured
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('SUPABASE_SERVICE_ROLE_KEY is not configured')
+      return NextResponse.json({ 
+        error: 'Server configuration error: Missing service role key' 
+      }, { status: 500 })
+    }
+
     const supabase = await createClient()
     
     // Check if user is authenticated
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
+      console.error('Auth error:', authError)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -21,7 +30,10 @@ export async function GET(request: NextRequest) {
 
     if (userError || !currentUser) {
       console.error('Error fetching current user:', userError)
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      return NextResponse.json({ 
+        error: 'User not found',
+        details: userError?.message 
+      }, { status: 404 })
     }
 
     // Get query parameters
@@ -70,11 +82,20 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if service role key is configured
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('SUPABASE_SERVICE_ROLE_KEY is not configured')
+      return NextResponse.json({ 
+        error: 'Server configuration error: Missing service role key' 
+      }, { status: 500 })
+    }
+
     const supabase = await createClient()
     
     // Check if user is authenticated and is an admin
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
+      console.error('Auth error:', authError)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -88,7 +109,10 @@ export async function POST(request: NextRequest) {
 
     if (userError || !currentUser || currentUser.role !== 'admin') {
       console.error('Error fetching current user or not admin:', userError)
-      return NextResponse.json({ error: 'Only admins can create users' }, { status: 403 })
+      return NextResponse.json({ 
+        error: 'Only admins can create users',
+        details: userError?.message 
+      }, { status: 403 })
     }
 
     const body = await request.json()
