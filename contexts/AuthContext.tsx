@@ -58,9 +58,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('Loading user data for:', userId)
       
-      // Add a small delay to ensure session is fully established
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
       // Fetch user data
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -72,9 +69,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (userError) {
         console.error('User error details:', userError)
-        // If it's an RLS error, sign out the user
-        if (userError.code === 'PGRST116' || userError.message?.includes('row-level security')) {
-          console.error('RLS policy blocking user access - signing out')
+        // If user not found or RLS error, it means the auth user doesn't have a corresponding user record
+        if (userError.code === 'PGRST116' || userError.code === '42501' || 
+            userError.message?.includes('row-level security') || 
+            userError.message?.includes('no rows returned')) {
+          console.error('Cannot access user data - signing out')
+          setLoading(false)
           await signOut()
           return
         }
@@ -83,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!userData) {
         console.error('No user data returned - signing out')
+        setLoading(false)
         await signOut()
         return
       }
@@ -100,11 +101,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (tenantError) {
         console.error('Tenant error details:', tenantError)
+        if (tenantError.code === 'PGRST116' || tenantError.code === '42501') {
+          console.error('Cannot access tenant data - signing out')
+          setLoading(false)
+          await signOut()
+          return
+        }
         throw tenantError
       }
 
       if (!tenantData) {
-        throw new Error('No tenant data returned')
+        console.error('No tenant data returned - signing out')
+        setLoading(false)
+        await signOut()
+        return
       }
 
       setTenant(tenantData as Tenant)
@@ -114,7 +124,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Error message:', error?.message)
       console.error('Error code:', error?.code)
       console.error('Error details:', error?.details)
-      // Don't sign out on other errors, just set loading to false
+      // On unexpected errors, sign out to prevent redirect loops
+      setUser(null)
+      setTenant(null)
     } finally {
       setLoading(false)
     }

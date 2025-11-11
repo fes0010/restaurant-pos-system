@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -17,8 +17,16 @@ type LoginFormData = z.infer<typeof loginSchema>
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
-  const { signIn } = useAuth()
+  const { signIn, user, loading } = useAuth()
   const router = useRouter()
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!loading && user) {
+      console.log('Login page: User already logged in, redirecting to dashboard')
+      router.push('/dashboard')
+    }
+  }, [user, loading, router])
 
   const {
     register,
@@ -32,13 +40,30 @@ export default function LoginPage() {
     setIsLoading(true)
     try {
       await signIn(data.email, data.password)
+      console.log('Login successful, redirecting to dashboard')
       toast.success('Logged in successfully')
-      router.push('/dashboard')
+      // Give a small delay for auth state to update
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 500)
     } catch (error: any) {
+      console.error('Login error:', error)
       toast.error(error.message || 'Failed to log in')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Show loading while checking auth status
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
