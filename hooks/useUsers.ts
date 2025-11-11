@@ -24,6 +24,8 @@ export function useUsers(filters?: {
     queryKey: ['users', tenant?.id, filters],
     queryFn: () => getUsers(tenant!.id, filters),
     enabled: !!tenant,
+    staleTime: 30000, // 30 seconds - users don't change that often
+    gcTime: 5 * 60 * 1000, // 5 minutes garbage collection
   })
 }
 
@@ -32,6 +34,7 @@ export function useUser(userId: string) {
     queryKey: ['user', userId],
     queryFn: () => getUserById(userId),
     enabled: !!userId,
+    staleTime: 30000,
   })
 }
 
@@ -43,6 +46,7 @@ export function useCreateUser() {
     mutationFn: (data: CreateUserData) => createUser(tenant!.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
+      queryClient.refetchQueries({ queryKey: ['users'], type: 'active' })
     },
   })
 }
@@ -55,6 +59,7 @@ export function useUpdateUser() {
       updateUser(userId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
+      queryClient.refetchQueries({ queryKey: ['users'], type: 'active' })
     },
   })
 }
@@ -66,6 +71,7 @@ export function useDeleteUser() {
     mutationFn: (userId: string) => deleteUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
+      queryClient.refetchQueries({ queryKey: ['users'], type: 'active' })
     },
   })
 }
