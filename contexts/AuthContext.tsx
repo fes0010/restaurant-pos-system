@@ -38,7 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, session?.user?.id)
       if (session?.user) {
         setSupabaseUser(session.user)
         loadUserData(session.user.id)
@@ -51,11 +52,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [supabase])
 
   async function loadUserData(userId: string) {
     try {
       console.log('Loading user data for:', userId)
+      
+      // Add a small delay to ensure session is fully established
+      await new Promise(resolve => setTimeout(resolve, 100))
       
       // Fetch user data
       const { data: userData, error: userError } = await supabase
@@ -68,11 +72,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (userError) {
         console.error('User error details:', userError)
+        // If it's an RLS error, sign out the user
+        if (userError.code === 'PGRST116' || userError.message?.includes('row-level security')) {
+          console.error('RLS policy blocking user access - signing out')
+          await signOut()
+          return
+        }
         throw userError
       }
 
       if (!userData) {
-        throw new Error('No user data returned')
+        console.error('No user data returned - signing out')
+        await signOut()
+        return
       }
 
       setUser(userData as User)
@@ -102,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Error message:', error?.message)
       console.error('Error code:', error?.code)
       console.error('Error details:', error?.details)
+      // Don't sign out on other errors, just set loading to false
     } finally {
       setLoading(false)
     }
