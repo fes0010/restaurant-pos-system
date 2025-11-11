@@ -26,12 +26,17 @@ const nextConfig: NextConfig = {
 };
 
 // Apply PWA configuration
+// Note: next-pwa requires webpack, not turbopack
 const config = withPWA({
   dest: "public",
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
   buildExcludes: [/middleware-manifest\.json$/],
+  // Webpack is required for PWA plugin
+  webpack: (config: any) => {
+    return config;
+  },
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
