@@ -16,8 +16,9 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV SKIP_ENV_VALIDATION=1
+ENV TURBOPACK=0
 
-# Build the application (webpack flag already in package.json)
+# Build the application (webpack is required for PWA plugin)
 RUN npm run build
 
 # Production stage
