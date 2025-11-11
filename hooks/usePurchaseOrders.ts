@@ -24,6 +24,8 @@ export function usePurchaseOrders(filters?: {
     queryKey: ['purchase-orders', tenant?.id, filters],
     queryFn: () => getPurchaseOrders(tenant!.id, filters),
     enabled: !!tenant,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
 
@@ -32,6 +34,8 @@ export function usePurchaseOrder(id: string) {
     queryKey: ['purchase-order', id],
     queryFn: () => getPurchaseOrder(id),
     enabled: !!id,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
 
@@ -83,6 +87,9 @@ export function useRestockFromPurchaseOrder() {
       queryClient.invalidateQueries({ queryKey: ['purchase-orders'] })
       queryClient.invalidateQueries({ queryKey: ['products'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.refetchQueries({ queryKey: ['purchase-orders'], type: 'active' })
+      queryClient.refetchQueries({ queryKey: ['products'], type: 'active' })
+      queryClient.refetchQueries({ queryKey: ['dashboard'], type: 'active' })
     },
   })
 }

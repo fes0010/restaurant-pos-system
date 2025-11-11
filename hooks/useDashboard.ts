@@ -9,6 +9,8 @@ export function useDashboardKPIs(startDate?: Date, endDate?: Date) {
     queryKey: ['dashboard-kpis', tenant?.id, startDate, endDate],
     queryFn: () => getDashboardKPIs(tenant!.id, startDate, endDate),
     enabled: !!tenant,
+    staleTime: 0, // Always consider data stale
+    refetchOnMount: 'always', // Always refetch on mount
     refetchInterval: 30000, // Refetch every 30 seconds
   })
 }
@@ -20,6 +22,8 @@ export function useLowStockProducts() {
     queryKey: ['low-stock-products', tenant?.id],
     queryFn: () => getLowStockProducts(tenant!.id),
     enabled: !!tenant,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
 
@@ -30,5 +34,7 @@ export function useSalesTrend(days: number = 30) {
     queryKey: ['sales-trend', tenant?.id, days],
     queryFn: () => getSalesTrend(tenant!.id, days),
     enabled: !!tenant,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }

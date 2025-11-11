@@ -21,6 +21,8 @@ export function useCustomers(filters?: {
     queryKey: ['customers', tenant?.id, filters],
     queryFn: () => getCustomers(tenant!.id, filters),
     enabled: !!tenant,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
 
@@ -29,6 +31,8 @@ export function useCustomer(id: string) {
     queryKey: ['customer', id],
     queryFn: () => getCustomer(id),
     enabled: !!id,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
 
@@ -61,5 +65,7 @@ export function useCustomerTransactions(customerId: string, limit = 10) {
     queryKey: ['customer-transactions', customerId, limit],
     queryFn: () => getCustomerTransactions(customerId, limit),
     enabled: !!customerId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }

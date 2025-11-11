@@ -21,6 +21,8 @@ export function useReturns(filters?: {
     queryKey: ['returns', tenant?.id, filters],
     queryFn: () => getReturns(tenant!.id, filters),
     enabled: !!tenant,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
 
@@ -29,6 +31,8 @@ export function useReturn(returnId: string) {
     queryKey: ['return', returnId],
     queryFn: () => getReturnById(returnId),
     enabled: !!returnId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
 
@@ -56,6 +60,9 @@ export function useApproveReturn() {
       queryClient.invalidateQueries({ queryKey: ['products'] })
       queryClient.invalidateQueries({ queryKey: ['stock-history'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-kpis'] })
+      queryClient.refetchQueries({ queryKey: ['returns'], type: 'active' })
+      queryClient.refetchQueries({ queryKey: ['products'], type: 'active' })
+      queryClient.refetchQueries({ queryKey: ['dashboard'], type: 'active' })
     },
   })
 }

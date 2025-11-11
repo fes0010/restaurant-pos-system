@@ -29,6 +29,8 @@ export function useProducts(filters?: {
     queryKey: ['products', tenant?.id, filters],
     queryFn: () => getProducts(tenant!.id, filters),
     enabled: !!tenant,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 
   // Subscribe to realtime changes
@@ -65,6 +67,8 @@ export function useProduct(id: string) {
     queryKey: ['product', id],
     queryFn: () => getProduct(id),
     enabled: !!id,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
 
@@ -78,6 +82,8 @@ export function useCreateProduct() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
       queryClient.invalidateQueries({ queryKey: ['categories'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.refetchQueries({ queryKey: ['products'], type: 'active' })
     },
   })
 }
@@ -90,6 +96,8 @@ export function useUpdateProduct() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
       queryClient.invalidateQueries({ queryKey: ['product', data.id] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.refetchQueries({ queryKey: ['products'], type: 'active' })
     },
   })
 }
@@ -101,6 +109,8 @@ export function useArchiveProduct() {
     mutationFn: (id: string) => archiveProduct(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.refetchQueries({ queryKey: ['products'], type: 'active' })
     },
   })
 }
@@ -123,5 +133,7 @@ export function useCategories() {
     queryKey: ['categories', tenant?.id],
     queryFn: () => getCategories(tenant!.id),
     enabled: !!tenant,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
