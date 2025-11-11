@@ -1,9 +1,14 @@
 {
   "mcpServers": {
     "supabase": {
-      "url": "https://mcp.supabase.com/mcp?project_ref=kqjcnpxyrltdovhhlaug",
-      "headers": {
-        "Authorization": "Bearer sbp_83f3638eb4ab3834572b185b7d2395480d1e84f0"
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase"
+      ],
+      "env": {
+        "SUPABASE_PROJECT_REF": "kqjcnpxyrltdovhhlaug",
+        "SUPABASE_ACCESS_TOKEN": "sbp_83f3638eb4ab3834572b185b7d2395480d1e84f0"
       },
       "disabled": false,
       "autoApprove": [
@@ -14,8 +19,10 @@
         "get_project_url",
         "get_anon_key",
         "generate_typescript_types",
-        "search_docs"
+        "search_docs",
+        "list_projects"
       ]
     }
   }
+}
 }
