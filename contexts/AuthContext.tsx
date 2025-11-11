@@ -54,9 +54,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [supabase])
 
-  async function loadUserData(userId: string) {
+  async function loadUserData(userId: string, retryCount = 0) {
+    const MAX_RETRIES = 3
+    const RETRY_DELAY = 500 // ms
+
     try {
-      console.log('Loading user data for:', userId)
+      console.log(`Loading user data for: ${userId} (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`)
+      
+      // Add a small delay to ensure session is fully established
+      if (retryCount > 0) {
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * retryCount))
+      }
       
       // Fetch user data
       const { data: userData, error: userError } = await supabase
@@ -69,20 +77,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (userError) {
         console.error('User error details:', userError)
-        // If user not found or RLS error, it means the auth user doesn't have a corresponding user record
-        if (userError.code === 'PGRST116' || userError.code === '42501' || 
-            userError.message?.includes('row-level security') || 
-            userError.message?.includes('no rows returned')) {
-          console.error('Cannot access user data - signing out')
+        
+        // Retry on certain errors
+        if (retryCount < MAX_RETRIES && (
+          userError.code === 'PGRST116' || 
+          userError.code === '42501' ||
+          userError.message?.includes('JWT')
+        )) {
+          console.log(`Retrying user data load (${retryCount + 1}/${MAX_RETRIES})...`)
+          return loadUserData(userId, retryCount + 1)
+        }
+        
+        // After retries exhausted, sign out
+        if (userError.code === 'PGRST116' || userError.message?.includes('no rows')) {
+          console.error('User record not found after retries - signing out')
           setLoading(false)
           await signOut()
           return
         }
+        
         throw userError
       }
 
       if (!userData) {
-        console.error('No user data returned - signing out')
+        console.error('No user data returned')
+        if (retryCount < MAX_RETRIES) {
+          console.log(`Retrying user data load (${retryCount + 1}/${MAX_RETRIES})...`)
+          return loadUserData(userId, retryCount + 1)
+        }
         setLoading(false)
         await signOut()
         return
@@ -101,30 +123,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (tenantError) {
         console.error('Tenant error details:', tenantError)
-        if (tenantError.code === 'PGRST116' || tenantError.code === '42501') {
-          console.error('Cannot access tenant data - signing out')
-          setLoading(false)
-          await signOut()
-          return
+        
+        // Retry on certain errors
+        if (retryCount < MAX_RETRIES && (
+          tenantError.code === 'PGRST116' || 
+          tenantError.code === '42501'
+        )) {
+          console.log(`Retrying tenant data load (${retryCount + 1}/${MAX_RETRIES})...`)
+          return loadUserData(userId, retryCount + 1)
         }
+        
         throw tenantError
       }
 
       if (!tenantData) {
-        console.error('No tenant data returned - signing out')
+        console.error('No tenant data returned')
+        if (retryCount < MAX_RETRIES) {
+          console.log(`Retrying tenant data load (${retryCount + 1}/${MAX_RETRIES})...`)
+          return loadUserData(userId, retryCount + 1)
+        }
         setLoading(false)
         await signOut()
         return
       }
 
       setTenant(tenantData as Tenant)
-      console.log('User data loaded successfully')
+      console.log('✅ User and tenant data loaded successfully')
     } catch (error: any) {
-      console.error('Error loading user data:', error)
+      console.error('❌ Error loading user data:', error)
       console.error('Error message:', error?.message)
       console.error('Error code:', error?.code)
       console.error('Error details:', error?.details)
-      // On unexpected errors, sign out to prevent redirect loops
+      
+      // Retry on unexpected errors
+      if (retryCount < MAX_RETRIES) {
+        console.log(`Retrying after error (${retryCount + 1}/${MAX_RETRIES})...`)
+        return loadUserData(userId, retryCount + 1)
+      }
+      
+      // After all retries, clear state but don't sign out (let user try again)
       setUser(null)
       setTenant(null)
     } finally {
