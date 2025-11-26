@@ -15,6 +15,7 @@ import { Printer } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { createImmediateSale } from '@/lib/services/transactions'
+import { TourHelpButton } from '@/components/tour/TourHelpButton'
 
 const CART_STORAGE_KEY = 'pos-cart'
 const DISCOUNT_STORAGE_KEY = 'pos-discount'
@@ -218,7 +219,7 @@ export default function POSPage() {
   return (
     <ProtectedRoute>
       <AppLayout>
-        <div className="h-[calc(100vh-4rem)]">
+        <div className="h-[calc(100vh-4rem)] pos-container" data-tour-id="pos-container">
           <div className="bg-card border rounded-lg p-4 sm:p-6 h-full flex flex-col">
             <div className="mb-3 sm:mb-4">
               <h1 className="text-xl sm:text-2xl font-bold">Point of Sale</h1>
@@ -227,14 +228,14 @@ export default function POSPage() {
               </p>
             </div>
             
-            <div className="mb-3 sm:mb-4">
+            <div className="mb-3 sm:mb-4" data-tour-id="customer-selector">
               <CustomerSelector
                 selectedCustomer={selectedCustomer}
                 onSelectCustomer={setSelectedCustomer}
               />
             </div>
 
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden" data-tour-id="product-grid">
               <ProductCardGrid 
                 onAddToCart={handleAddToCart}
                 onImmediateSale={handleImmediateSale}
@@ -242,6 +243,9 @@ export default function POSPage() {
             </div>
           </div>
         </div>
+
+        {/* Tour Help Button */}
+        <TourHelpButton pageId="pos" />
 
         {/* Floating Cart */}
         <FloatingCart

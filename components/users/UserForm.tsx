@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { useCreateUser, useUpdateUser } from '@/hooks/useUsers'
+import { useAuth } from '@/contexts/AuthContext'
 import { User } from '@/lib/services/users'
 import {
   Dialog,
@@ -42,10 +43,13 @@ interface UserFormProps {
 
 export function UserForm({ user, open, onOpenChange }: UserFormProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const { user: currentUser } = useAuth()
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()
 
   const isEditing = !!user
+  const isEditingSelf = isEditing && user?.id === currentUser?.id
+  const isCurrentUserAdmin = currentUser?.role === 'admin'
 
   const {
     register,
@@ -159,6 +163,7 @@ export function UserForm({ user, open, onOpenChange }: UserFormProps) {
             <select
               {...register('role')}
               className="w-full px-3 py-2 border border-input rounded-md bg-background"
+              disabled={isEditingSelf && isCurrentUserAdmin}
             >
               <option value="sales_person">Sales Person</option>
               <option value="admin">Admin</option>
@@ -166,9 +171,15 @@ export function UserForm({ user, open, onOpenChange }: UserFormProps) {
             {errors.role && (
               <p className="text-sm text-destructive mt-1">{errors.role.message}</p>
             )}
-            <p className="text-xs text-muted-foreground mt-1">
-              Admins have full access. Sales persons can only access POS and view transactions.
-            </p>
+            {isEditingSelf && isCurrentUserAdmin ? (
+              <p className="text-xs text-muted-foreground mt-1">
+                You cannot change your own role. Another admin must change it.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">
+                Admins have full access. Sales persons can only access POS and view transactions.
+              </p>
+            )}
           </div>
 
           <DialogFooter>

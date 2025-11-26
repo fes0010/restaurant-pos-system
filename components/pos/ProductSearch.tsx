@@ -47,7 +47,7 @@ export function ProductSearch({ onAddToCart }: ProductSearchProps) {
 
   return (
     <div className="space-y-4">
-      <div className="relative">
+      <div className="relative" data-tour="product-search">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         <Input
           placeholder="Search by name, SKU, or scan barcode..."
@@ -55,6 +55,7 @@ export function ProductSearch({ onAddToCart }: ProductSearchProps) {
           onChange={(e) => setSearch(e.target.value)}
           className="pl-10 h-12 text-lg"
           autoFocus
+          data-tour="product-search-input"
         />
       </div>
 

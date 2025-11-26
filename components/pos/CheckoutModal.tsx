@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CartItem } from './Cart'
 import { Customer } from '@/types'
 import { useCreateTransaction } from '@/hooks/useTransactions'
-import { useUsers } from '@/hooks/useUsers'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
@@ -37,13 +36,11 @@ export function CheckoutModal({
 }: CheckoutModalProps) {
   const { user } = useAuth()
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'bank' | 'debt'>('cash')
-  const [amountTendered, setAmountTendered] = useState<number>(total)
-  const [servedBy, setServedBy] = useState<string>(user?.id || '')
+  const [amountReceived, setAmountReceived] = useState<number>(total)
   const createTransaction = useCreateTransaction()
-  const { data: usersData } = useUsers()
 
-  const change = paymentMethod === 'cash' ? Math.max(0, amountTendered - total) : 0
-  const isValidPayment = paymentMethod !== 'cash' || amountTendered >= total
+  const change = paymentMethod === 'cash' ? Math.max(0, amountReceived - total) : 0
+  const isValidPayment = paymentMethod !== 'cash' || amountReceived >= total
 
   const formatCurrency = (value: number) => {
     return `KSH ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -51,7 +48,12 @@ export function CheckoutModal({
 
   const handleCheckout = async () => {
     if (!isValidPayment) {
-      toast.error('Amount tendered must be greater than or equal to total')
+      toast.error('Amount received must be greater than or equal to total')
+      return
+    }
+
+    if (!user?.id) {
+      toast.error('User not authenticated')
       return
     }
 
@@ -60,7 +62,7 @@ export function CheckoutModal({
       
       const transaction = await createTransaction.mutateAsync({
         customer_id: customer?.id,
-        served_by: servedBy,
+        served_by: user.id,
         items: items.map((item) => ({
           product_id: item.product.id,
           product_name: item.product.name,
@@ -74,7 +76,7 @@ export function CheckoutModal({
         discount_amount: discountAmount,
         total,
         payment_method: paymentMethod,
-        amount_tendered: paymentMethod === 'cash' ? amountTendered : undefined,
+        amount_tendered: paymentMethod === 'cash' ? amountReceived : undefined,
       })
 
       toast.success('Transaction completed successfully')
@@ -126,19 +128,13 @@ export function CheckoutModal({
 
           {/* Served By */}
           <div>
-            <Label htmlFor="served-by">Served By *</Label>
-            <Select value={servedBy} onValueChange={setServedBy}>
-              <SelectTrigger id="served-by">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {usersData?.users?.map((u: any) => (
-                  <SelectItem key={u.id} value={u.id}>
-                    {u.full_name} ({u.role})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="served-by">Served By</Label>
+            <Input
+              id="served-by"
+              value={user?.full_name || ''}
+              disabled
+              className="bg-muted"
+            />
           </div>
 
           {/* Payment Method */}
@@ -161,13 +157,13 @@ export function CheckoutModal({
           {paymentMethod === 'cash' && (
             <>
               <div>
-                <Label htmlFor="amount-tendered">Amount Tendered *</Label>
+                <Label htmlFor="amount-received">Amount Received *</Label>
                 <Input
-                  id="amount-tendered"
+                  id="amount-received"
                   type="number"
                   step="0.01"
-                  value={amountTendered}
-                  onChange={(e) => setAmountTendered(Number(e.target.value) || 0)}
+                  value={amountReceived}
+                  onChange={(e) => setAmountReceived(Number(e.target.value) || 0)}
                   min={0}
                 />
               </div>
@@ -181,7 +177,7 @@ export function CheckoutModal({
                 </div>
                 {change < 0 && (
                   <p className="text-xs text-destructive mt-1">
-                    Insufficient amount tendered
+                    Insufficient amount received
                   </p>
                 )}
               </div>

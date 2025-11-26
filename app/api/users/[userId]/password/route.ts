@@ -1,10 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { strictApiRateLimit } from '@/lib/rate-limit'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
+  // Apply strict rate limiting for password changes
+  const rateLimitResult = strictApiRateLimit.check(request)
+  
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: 'Too many password change attempts. Please try again later.' },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+          'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          'X-RateLimit-Reset': new Date(rateLimitResult.reset).toISOString(),
+          'Retry-After': Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString()
+        }
+      }
+    )
+  }
+
   try {
     const supabase = await createClient()
     

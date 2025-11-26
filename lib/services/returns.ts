@@ -268,3 +268,77 @@ export async function rejectReturn(returnId: string, userId: string) {
   if (error) throw error
   return data
 }
+
+export async function revertReturnToPending(returnId: string) {
+  const supabase = createClient()
+  
+  // Get the return to check if it was approved
+  const { data: returnData, error: fetchError } = await supabase
+    .from('returns')
+    .select(`
+      *,
+      return_items(
+        product_id,
+        quantity
+      )
+    `)
+    .eq('id', returnId)
+    .single()
+
+  if (fetchError) throw fetchError
+
+  // If the return was approved, we need to reverse the stock changes
+  if (returnData.status === 'approved') {
+    for (const item of (returnData.return_items || []) as unknown as any[]) {
+      // Get current stock
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .select('stock_quantity')
+        .eq('id', item.product_id)
+        .single()
+
+      if (productError) throw productError
+
+      const newStock = Number(product.stock_quantity) - item.quantity
+
+      // Update product stock (reverse the addition)
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ stock_quantity: newStock })
+        .eq('id', item.product_id)
+
+      if (updateError) throw updateError
+
+      // Create stock history record for the reversal
+      const { error: historyError } = await supabase
+        .from('stock_history')
+        .insert({
+          tenant_id: returnData.tenant_id,
+          product_id: item.product_id,
+          type: 'adjustment',
+          quantity_change: -item.quantity,
+          quantity_after: newStock,
+          reason: `Return reverted to pending: ${returnData.return_number}`,
+          reference_id: returnId,
+          created_by: returnData.approved_by || returnData.created_by,
+        })
+
+      if (historyError) throw historyError
+    }
+  }
+
+  // Update return status back to pending
+  const { data, error } = await supabase
+    .from('returns')
+    .update({
+      status: 'pending',
+      approved_by: null,
+      approved_at: null,
+    })
+    .eq('id', returnId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}

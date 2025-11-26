@@ -7,6 +7,7 @@ import { useDashboardKPIs } from '@/hooks/useDashboard'
 import { KPICard } from '@/components/dashboard/KPICard'
 import { SalesTrendChart } from '@/components/dashboard/SalesTrendChart'
 import { LowStockTable } from '@/components/dashboard/LowStockTable'
+import { TourHelpButton } from '@/components/tour/TourHelpButton'
 import { DollarSign, TrendingUp, ShoppingCart, AlertTriangle } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -23,7 +24,7 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute requireAdmin={true}>
       <AppLayout>
-        <div className="space-y-6">
+        <div className="space-y-6" data-tour="dashboard-container">
           <div>
             <h1 className="text-2xl font-bold">Welcome back, {user?.full_name}</h1>
             <p className="text-muted-foreground mt-1">
@@ -31,7 +32,7 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4" data-tour="kpi-cards">
             <KPICard
               title="Total Revenue"
               value={formatCurrency(kpis?.totalRevenue || 0)}
@@ -66,10 +67,16 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <SalesTrendChart />
-            <LowStockTable />
+            <div data-tour="sales-chart">
+              <SalesTrendChart />
+            </div>
+            <div data-tour="low-stock-table">
+              <LowStockTable />
+            </div>
           </div>
         </div>
+        
+        <TourHelpButton pageId="dashboard" />
       </AppLayout>
     </ProtectedRoute>
   )

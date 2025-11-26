@@ -159,3 +159,6 @@ export interface StockHistory {
   user?: User;
   product?: Product;
 }
+
+// Export tour types
+export * from './tour';

@@ -114,6 +114,7 @@ export function FloatingCart({
       {/* Floating Cart */}
       <div
         ref={cartRef}
+        data-tour-id="cart-container"
         className={cn(
           'fixed z-50 transition-all duration-300 ease-in-out',
           isExpanded 
@@ -125,6 +126,7 @@ export function FloatingCart({
         {!isExpanded && (
           <button
             onClick={onToggle}
+            data-tour-id="floating-cart-toggle"
             className="flex flex-col items-center justify-center bg-primary text-primary-foreground rounded-full shadow-2xl hover:scale-110 transition-transform group w-16 h-16 sm:w-20 sm:h-20"
           >
             <div className="relative">
@@ -329,6 +331,7 @@ export function FloatingCart({
                   className="w-full h-12 text-lg"
                   onClick={onCheckout}
                   disabled={items.length === 0}
+                  data-tour-id="checkout-button"
                 >
                   Checkout
                 </Button>

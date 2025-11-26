@@ -6,6 +6,7 @@ import {
   getReturnById,
   approveReturn,
   rejectReturn,
+  revertReturnToPending,
   CreateReturnData,
 } from '@/lib/services/returns'
 
@@ -75,6 +76,23 @@ export function useRejectReturn() {
     mutationFn: (returnId: string) => rejectReturn(returnId, user!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['returns'] })
+    },
+  })
+}
+
+export function useRevertReturnToPending() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (returnId: string) => revertReturnToPending(returnId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['returns'] })
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['stock-history'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-kpis'] })
+      queryClient.refetchQueries({ queryKey: ['returns'], type: 'active' })
+      queryClient.refetchQueries({ queryKey: ['products'], type: 'active' })
+      queryClient.refetchQueries({ queryKey: ['dashboard'], type: 'active' })
     },
   })
 }

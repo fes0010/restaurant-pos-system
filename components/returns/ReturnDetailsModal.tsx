@@ -1,7 +1,7 @@
 'use client'
 
 import { Return } from '@/lib/services/returns'
-import { useApproveReturn, useRejectReturn } from '@/hooks/useReturns'
+import { useApproveReturn, useRejectReturn, useRevertReturnToPending } from '@/hooks/useReturns'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   Dialog,
@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
-import { CheckCircle, XCircle, Clock, Package } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Package, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useState } from 'react'
 
@@ -46,6 +46,7 @@ export function ReturnDetailsModal({ returnItem, open, onOpenChange }: ReturnDet
   const [isProcessing, setIsProcessing] = useState(false)
   const approveReturn = useApproveReturn()
   const rejectReturn = useRejectReturn()
+  const revertReturn = useRevertReturnToPending()
 
   if (!returnItem) return null
 
@@ -83,6 +84,28 @@ export function ReturnDetailsModal({ returnItem, open, onOpenChange }: ReturnDet
       onOpenChange(false)
     } catch (error: any) {
       toast.error(error.message || 'Failed to reject return')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleRevert = async () => {
+    const statusText = returnItem.status === 'approved' ? 'approved' : 'rejected'
+    const warningText = returnItem.status === 'approved' 
+      ? 'This will reverse the stock restoration.' 
+      : ''
+    
+    if (!confirm(`Are you sure you want to revert this ${statusText} return back to pending? ${warningText}`)) {
+      return
+    }
+
+    setIsProcessing(true)
+    try {
+      await revertReturn.mutateAsync(returnItem.id)
+      toast.success('Return reverted to pending')
+      onOpenChange(false)
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to revert return')
     } finally {
       setIsProcessing(false)
     }
@@ -219,6 +242,16 @@ export function ReturnDetailsModal({ returnItem, open, onOpenChange }: ReturnDet
                 {isProcessing ? 'Processing...' : 'Approve & Restore Stock'}
               </Button>
             </>
+          )}
+          {isAdmin && !isPending && (
+            <Button
+              variant="outline"
+              onClick={handleRevert}
+              disabled={isProcessing}
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              {isProcessing ? 'Reverting...' : 'Revert to Pending'}
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>
