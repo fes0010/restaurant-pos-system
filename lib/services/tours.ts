@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { Database } from '@/types/supabase'
 import {
   UserTourProgress,
   UserTourHintDismissed,
@@ -7,6 +8,45 @@ import {
   TourStatus,
   TourEventType
 } from '@/types'
+
+type DbUserTourProgress = Database['public']['Tables']['user_tour_progress']['Row']
+type DbTourAnalytics = Database['public']['Tables']['tour_analytics']['Row']
+
+/**
+ * Map database row to UserTourProgress type
+ */
+function mapToUserTourProgress(row: DbUserTourProgress): UserTourProgress {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    tenant_id: row.tenant_id,
+    tour_id: row.tour_id,
+    status: row.status as TourStatus,
+    current_step: row.current_step || 0,
+    total_steps: row.total_steps || 0,
+    completed_at: row.completed_at || undefined,
+    started_at: row.started_at || undefined,
+    time_spent_seconds: row.time_spent_seconds || 0,
+    created_at: row.created_at || '',
+    updated_at: row.updated_at || ''
+  }
+}
+
+/**
+ * Map database row to TourAnalyticsEvent type
+ */
+function mapToTourAnalyticsEvent(row: DbTourAnalytics): TourAnalyticsEvent {
+  return {
+    id: row.id,
+    tenant_id: row.tenant_id,
+    tour_id: row.tour_id,
+    step_id: row.step_id ?? undefined,
+    event_type: row.event_type as TourEventType,
+    user_id: row.user_id ?? undefined,
+    metadata: (row.metadata as Record<string, any>) ?? undefined,
+    created_at: row.created_at ?? ''
+  }
+}
 
 /**
  * Fetch all tour progress records for a user
@@ -25,7 +65,7 @@ export async function getUserTourProgress(userId: string): Promise<UserTourProgr
     throw new Error('Failed to fetch tour progress')
   }
 
-  return data || []
+  return (data || []).map(mapToUserTourProgress)
 }
 
 /**
@@ -53,7 +93,7 @@ export async function getTourProgress(
     throw new Error('Failed to fetch tour progress')
   }
 
-  return data
+  return mapToUserTourProgress(data)
 }
 
 /**
@@ -84,7 +124,7 @@ export async function updateTourProgress(
     throw new Error('Failed to update tour progress')
   }
 
-  return data
+  return mapToUserTourProgress(data)
 }
 
 /**
@@ -245,7 +285,7 @@ export async function trackTourEvent(
   tenantId: string,
   tourId: string,
   eventType: TourEventType,
-  userId: string,
+  userId?: string,
   stepId?: string,
   metadata?: Record<string, any>
 ): Promise<void> {
@@ -257,9 +297,9 @@ export async function trackTourEvent(
       p_tour_id: tourId,
       p_step_id: stepId || null,
       p_event_type: eventType,
-      p_user_id: userId,
+      p_user_id: userId || null,
       p_metadata: metadata || null
-    })
+    } as any)
 
   if (error) {
     // Log but don't throw - analytics failures shouldn't break the app
@@ -293,7 +333,7 @@ export async function getTourAnalytics(
     throw new Error('Failed to fetch tour analytics')
   }
 
-  return data || []
+  return (data || []).map(mapToTourAnalyticsEvent)
 }
 
 /**
