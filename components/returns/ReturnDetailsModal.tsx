@@ -199,16 +199,16 @@ export function ReturnDetailsModal({ returnItem, open, onOpenChange }: ReturnDet
                     <div>
                       <p className="font-medium">{item.product?.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        SKU: {item.product?.sku} • ${item.unit_price.toFixed(2)} each
+                        SKU: {item.product?.sku} • KSH {item.unit_price.toFixed(2)} each
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className="font-medium">
-                      {item.quantity} × ${item.unit_price.toFixed(2)}
+                      {item.quantity} × KSH {item.unit_price.toFixed(2)}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      ${item.subtotal.toFixed(2)}
+                      KSH {item.subtotal.toFixed(2)}
                     </p>
                   </div>
                 </div>
@@ -219,7 +219,7 @@ export function ReturnDetailsModal({ returnItem, open, onOpenChange }: ReturnDet
           {/* Total */}
           <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
             <span className="font-semibold">Total Return Amount</span>
-            <span className="text-xl font-bold">${returnItem.total_amount.toFixed(2)}</span>
+            <span className="text-xl font-bold">KSH {returnItem.total_amount.toFixed(2)}</span>
           </div>
         </div>
 

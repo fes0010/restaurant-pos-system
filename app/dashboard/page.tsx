@@ -20,10 +20,7 @@ export default function DashboardPage() {
   const { data: kpis, isLoading } = useDashboardKPIs(dateRange.startDate, dateRange.endDate)
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: tenant?.settings?.currency || 'USD',
-    }).format(amount)
+    return `KSH ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   const getDateDescription = () => {
