@@ -13,6 +13,8 @@ import {
 export function useReturns(filters?: {
   status?: string
   search?: string
+  dateFrom?: string
+  dateTo?: string
   page?: number
   pageSize?: number
 }) {

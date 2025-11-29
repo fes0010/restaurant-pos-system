@@ -15,7 +15,6 @@ import { Printer } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { createImmediateSale } from '@/lib/services/transactions'
-import { TourHelpButton } from '@/components/tour/TourHelpButton'
 
 const CART_STORAGE_KEY = 'pos-cart'
 const DISCOUNT_STORAGE_KEY = 'pos-discount'
@@ -243,9 +242,6 @@ export default function POSPage() {
             </div>
           </div>
         </div>
-
-        {/* Tour Help Button */}
-        <TourHelpButton pageId="pos" />
 
         {/* Floating Cart */}
         <FloatingCart

@@ -3,7 +3,6 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ProductList } from '@/components/inventory/ProductList'
-import { TourHelpButton } from '@/components/tour/TourHelpButton'
 
 export default function InventoryPage() {
   return (
@@ -19,8 +18,6 @@ export default function InventoryPage() {
 
           <ProductList />
         </div>
-        
-        <TourHelpButton pageId="inventory" />
       </AppLayout>
     </ProtectedRoute>
   )

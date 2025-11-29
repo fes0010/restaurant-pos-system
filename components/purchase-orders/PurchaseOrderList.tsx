@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -11,18 +11,29 @@ import { MonetaryValue } from '@/components/ui/value-display'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { PurchaseOrderForm } from './PurchaseOrderForm'
 import { PurchaseOrderDetails } from './PurchaseOrderDetails'
+import { DateFilter, DateFilterOption, getDateRange } from '@/components/dashboard/DateFilter'
 import { format } from 'date-fns'
 import { Plus, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
 
 export function PurchaseOrderList() {
   const [status, setStatus] = useState<string>('all')
+  const [dateFilter, setDateFilter] = useState<DateFilterOption>('last30days')
+  const [customDate, setCustomDate] = useState<Date>(new Date())
   const [page, setPage] = useState(1)
   const [selectedPO, setSelectedPO] = useState<any>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
 
   const pageSize = 20
-  const { data, isLoading } = usePurchaseOrders({ status: status === 'all' ? undefined : status, page, pageSize })
+  const dateRange = useMemo(() => getDateRange(dateFilter, customDate), [dateFilter, customDate])
+  
+  const { data, isLoading } = usePurchaseOrders({ 
+    status: status === 'all' ? undefined : status, 
+    dateFrom: dateRange.startDate.toISOString(),
+    dateTo: dateRange.endDate.toISOString(),
+    page, 
+    pageSize 
+  })
 
   const formatCurrency = (value: number) => {
     return `KSH ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -50,18 +61,32 @@ export function PurchaseOrderList() {
         </Button>
       </div>
 
-      <Select value={status} onValueChange={(value) => { setStatus(value); setPage(1) }}>
-        <SelectTrigger className="w-[200px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Status</SelectItem>
-          <SelectItem value="draft">Draft</SelectItem>
-          <SelectItem value="ordered">Ordered</SelectItem>
-          <SelectItem value="received">Received</SelectItem>
-          <SelectItem value="completed">Completed</SelectItem>
-        </SelectContent>
-      </Select>
+      <div className="flex gap-4 flex-wrap" data-tour="po-filters">
+        <DateFilter 
+          value={dateFilter} 
+          onChange={(value) => {
+            setDateFilter(value)
+            setPage(1)
+          }}
+          customDate={customDate}
+          onCustomDateChange={(date) => {
+            setCustomDate(date)
+            setPage(1)
+          }}
+        />
+        <Select value={status} onValueChange={(value) => { setStatus(value); setPage(1) }}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="ordered">Ordered</SelectItem>
+            <SelectItem value="received">Received</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       {isLoading ? (
         <div className="flex justify-center py-12"><LoadingSpinner /></div>

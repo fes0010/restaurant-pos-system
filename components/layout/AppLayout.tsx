@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { HeaderTourButton } from '@/components/tour/HeaderTourButton'
+import { TourPageId } from '@/types'
 import { 
   LayoutDashboard, 
   ShoppingCart, 
@@ -25,16 +27,17 @@ interface NavItem {
   href: string
   icon: React.ComponentType<{ className?: string }>
   adminOnly?: boolean
+  tourPageId: TourPageId
 }
 
 const navigation: NavItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, adminOnly: true },
-  { name: 'POS', href: '/pos', icon: ShoppingCart },
-  { name: 'Inventory', href: '/inventory', icon: Package, adminOnly: true },
-  { name: 'Transactions', href: '/transactions', icon: Receipt },
-  { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingBag, adminOnly: true },
-  { name: 'Returns', href: '/returns', icon: RotateCcw },
-  { name: 'Users', href: '/users', icon: Users, adminOnly: true },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, adminOnly: true, tourPageId: 'dashboard' },
+  { name: 'POS', href: '/pos', icon: ShoppingCart, tourPageId: 'pos' },
+  { name: 'Inventory', href: '/inventory', icon: Package, adminOnly: true, tourPageId: 'inventory' },
+  { name: 'Transactions', href: '/transactions', icon: Receipt, tourPageId: 'transactions' },
+  { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingBag, adminOnly: true, tourPageId: 'purchase-orders' },
+  { name: 'Returns', href: '/returns', icon: RotateCcw, tourPageId: 'returns' },
+  { name: 'Users', href: '/users', icon: Users, adminOnly: true, tourPageId: 'users' },
 ]
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
@@ -73,8 +76,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       >
         <div className="flex h-full flex-col">
           {/* Logo */}
-          <div className="flex h-16 items-center justify-between px-6 border-b border-border">
-            <h1 className="text-xl font-bold">Restaurant POS</h1>
+          <div className="flex h-16 items-center justify-between px-4 border-b border-border">
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <ShoppingCart className="h-5 w-5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg font-bold leading-tight">Smart POS</span>
+                <span className="text-[10px] text-muted-foreground leading-tight">Point of Sale</span>
+              </div>
+            </div>
             <button
               onClick={() => setSidebarOpen(false)}
               className="lg:hidden"
@@ -144,9 +155,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </h2>
           </div>
 
-          {/* Theme toggle and user badge */}
-          <div className="flex items-center gap-4">
+          {/* Theme toggle, tour button, and user badge */}
+          <div className="flex items-center gap-3">
             <ThemeToggle />
+            {navigation.find((item) => item.href === pathname)?.tourPageId && (
+              <HeaderTourButton 
+                pageId={navigation.find((item) => item.href === pathname)!.tourPageId} 
+              />
+            )}
             <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
               <span className="capitalize">{user?.role.replace('_', ' ')}</span>
             </div>

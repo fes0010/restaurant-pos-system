@@ -1,0 +1,242 @@
+{
+  "projectName": "Restaurant POS System",
+  "projectType": "frontend",
+  "description": "A complete, modern Point of Sale system built for restaurants and fast food businesses with inventory management, sales tracking, purchase orders, returns management, and multi-user support with role-based access control.",
+  "techStack": {
+    "framework": "Next.js 16.0.1 (App Router)",
+    "language": "TypeScript 5.9.3",
+    "runtime": "Node.js 20+",
+    "uiLibrary": "React 19.2.0",
+    "styling": "Tailwind CSS 4.1.17",
+    "componentLibrary": "shadcn/ui (Radix UI)",
+    "backend": "Supabase (PostgreSQL, Auth, RLS)",
+    "stateManagement": "TanStack React Query 5.90.7",
+    "formHandling": "React Hook Form 7.66.0 + Zod 4.1.12",
+    "charts": "Recharts 3.3.0",
+    "pwa": "next-pwa 5.6.0",
+    "testing": {
+      "unit": "Vitest 4.0.8",
+      "e2e": "Playwright 1.56.1",
+      "testingLibrary": "@testing-library/react 16.3.0"
+    }
+  },
+  "features": [
+    {
+      "name": "Point of Sale (POS)",
+      "description": "Fast, intuitive interface for processing sales with product search, cart management, customer selection, discounts, and multiple payment methods",
+      "routes": ["/pos"],
+      "components": ["ProductCardGrid", "FloatingCart", "CheckoutModal", "CustomerSelector", "ProductSearch"]
+    },
+    {
+      "name": "Dashboard Analytics",
+      "description": "Real-time KPIs, sales trends, revenue tracking, profit analysis, and low stock alerts",
+      "routes": ["/dashboard"],
+      "components": ["DashboardStats", "SalesChart", "LowStockAlerts"]
+    },
+    {
+      "name": "Inventory Management",
+      "description": "Track products, stock levels, costs, categories, and complete stock history with audit trail",
+      "routes": ["/inventory"],
+      "components": ["ProductForm", "StockAdjustment", "ProductList"]
+    },
+    {
+      "name": "Transaction History",
+      "description": "Complete sales records with filtering, search, export to CSV, and receipt printing",
+      "routes": ["/transactions"],
+      "components": ["TransactionList", "TransactionDetails", "ReceiptPrint"]
+    },
+    {
+      "name": "Purchase Orders",
+      "description": "Manage supplier orders, inventory restocking, order tracking, and receiving",
+      "routes": ["/purchase-orders"],
+      "components": ["PurchaseOrderForm", "PurchaseOrderList", "PurchaseOrderDetails"]
+    },
+    {
+      "name": "Returns Management",
+      "description": "Handle product returns with approval workflow, automatic stock restoration, and reason tracking",
+      "routes": ["/returns"],
+      "components": ["ReturnForm", "ReturnList", "ReturnDetailsModal"]
+    },
+    {
+      "name": "User Management",
+      "description": "Multi-user support with admin and sales person roles, user creation, password management",
+      "routes": ["/users"],
+      "components": ["UserForm", "UserList"]
+    },
+    {
+      "name": "Authentication",
+      "description": "Secure login with Supabase Auth, role-based access control, protected routes",
+      "routes": ["/login", "/setup"],
+      "components": ["LoginForm", "ProtectedRoute"]
+    },
+    {
+      "name": "Interactive Tour Guide",
+      "description": "Step-by-step guided tours for each page with progress tracking, hints, and interactive steps",
+      "routes": ["all pages"],
+      "components": ["TourEngine", "TourTooltip", "TourOverlay", "TourMenu", "TourHelpButton", "WelcomeModal"]
+    },
+    {
+      "name": "Progressive Web App",
+      "description": "Installable PWA with offline support, service workers, and app-like experience",
+      "routes": ["all pages"],
+      "components": ["manifest.json", "sw.js"]
+    },
+    {
+      "name": "Theme Toggle",
+      "description": "Dark/Light mode with system preference detection",
+      "routes": ["all pages"],
+      "components": ["ThemeToggle", "ThemeContext"]
+    }
+  ],
+  "architecture": {
+    "pattern": "Multi-tenant SaaS",
+    "dataIsolation": "Row Level Security (RLS) policies",
+    "authentication": "Supabase Auth with JWT",
+    "authorization": "Role-based access control (Admin / Sales Person)",
+    "routing": "Next.js App Router with server and client components",
+    "apiLayer": "Supabase client with service layer abstraction"
+  },
+  "database": {
+    "type": "PostgreSQL (Supabase)",
+    "mainTables": [
+      "tenants",
+      "users",
+      "products",
+      "stock_history",
+      "customers",
+      "transactions",
+      "transaction_items",
+      "purchase_orders",
+      "purchase_order_items",
+      "returns",
+      "return_items",
+      "user_tour_progress",
+      "tour_analytics"
+    ],
+    "security": "Row Level Security (RLS) on all tables"
+  },
+  "userRoles": [
+    {
+      "role": "admin",
+      "permissions": [
+        "Full system access",
+        "Dashboard analytics",
+        "Inventory management",
+        "Purchase order management",
+        "User management",
+        "Return approval",
+        "All sales person features"
+      ]
+    },
+    {
+      "role": "sales_person",
+      "permissions": [
+        "Point of Sale",
+        "View transactions",
+        "Create return requests",
+        "View own sales history"
+      ]
+    }
+  ],
+  "keyWorkflows": [
+    {
+      "name": "Making a Sale",
+      "steps": [
+        "Search and add products to cart",
+        "Adjust quantities as needed",
+        "Select customer (optional)",
+        "Apply discount (optional)",
+        "Choose payment method (Cash, M-Pesa, Bank, Debt)",
+        "Complete sale and print receipt"
+      ]
+    },
+    {
+      "name": "Managing Inventory",
+      "steps": [
+        "Add products with details and pricing",
+        "Set stock levels and thresholds",
+        "Adjust stock with reason tracking",
+        "View complete stock history",
+        "Export inventory data"
+      ]
+    },
+    {
+      "name": "Processing Returns",
+      "steps": [
+        "Sales person creates return request",
+        "Admin reviews return details",
+        "Admin approves or rejects",
+        "Stock automatically restored on approval"
+      ]
+    },
+    {
+      "name": "Purchase Orders",
+      "steps": [
+        "Create PO with supplier details",
+        "Add products and quantities",
+        "Mark as ordered when placed",
+        "Mark as received when delivered",
+        "Restock inventory from PO"
+      ]
+    }
+  ],
+  "deployment": {
+    "platform": "Dokploy",
+    "url": "https://rubenpos.dokploy.site",
+    "containerization": "Docker",
+    "buildCommand": "npm run build",
+    "startCommand": "npm start",
+    "port": 3000
+  },
+  "environmentVariables": [
+    {
+      "name": "NEXT_PUBLIC_SUPABASE_URL",
+      "description": "Supabase project URL",
+      "required": true
+    },
+    {
+      "name": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "description": "Supabase anonymous key",
+      "required": true
+    }
+  ],
+  "criticalPaths": [
+    {
+      "path": "User Authentication",
+      "importance": "critical",
+      "description": "Users must be able to login and access role-appropriate features"
+    },
+    {
+      "path": "POS Transaction Flow",
+      "importance": "critical",
+      "description": "Core business function - must work flawlessly for sales"
+    },
+    {
+      "path": "Inventory Updates",
+      "importance": "critical",
+      "description": "Stock levels must update correctly on sales and adjustments"
+    },
+    {
+      "path": "Multi-tenant Data Isolation",
+      "importance": "critical",
+      "description": "Tenants must never see each other's data"
+    },
+    {
+      "path": "Return Approval Workflow",
+      "importance": "high",
+      "description": "Returns must follow proper approval process"
+    }
+  ],
+  "testingPriorities": [
+    "Authentication and authorization",
+    "POS transaction flow",
+    "Inventory stock updates",
+    "Multi-tenant data isolation",
+    "Return approval workflow",
+    "Purchase order processing",
+    "Dashboard analytics accuracy",
+    "Tour guide functionality",
+    "PWA offline capabilities",
+    "Responsive design on mobile/tablet"
+  ]
+}

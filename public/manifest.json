@@ -1,7 +1,7 @@
 {
-  "name": "Restaurant POS System",
-  "short_name": "POS",
-  "description": "Complete restaurant point of sale system with inventory management",
+  "name": "Smart POS - Point of Sale",
+  "short_name": "Smart POS",
+  "description": "Smart Point of Sale system for businesses",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

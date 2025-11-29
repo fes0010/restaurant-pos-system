@@ -112,6 +112,8 @@ export async function getReturns(
   filters?: {
     status?: string
     search?: string
+    dateFrom?: string
+    dateTo?: string
     page?: number
     pageSize?: number
   }
@@ -147,6 +149,14 @@ export async function getReturns(
 
   if (filters?.search) {
     query = query.or(`return_number.ilike.%${filters.search}%,reason.ilike.%${filters.search}%`)
+  }
+
+  if (filters?.dateFrom) {
+    query = query.gte('created_at', filters.dateFrom)
+  }
+
+  if (filters?.dateTo) {
+    query = query.lte('created_at', filters.dateTo)
   }
 
   const { data, error, count } = await query.range(from, to)

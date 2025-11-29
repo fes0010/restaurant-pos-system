@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTransactions } from '@/hooks/useTransactions'
 import { Transaction } from '@/types'
 import { Button } from '@/components/ui/button'
@@ -12,56 +12,36 @@ import { SemanticBadge } from '@/components/ui/semantic-badge'
 import { MonetaryValue } from '@/components/ui/value-display'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { TransactionDetails } from './TransactionDetails'
+import { DateFilter, DateFilterOption, getDateRange } from '@/components/dashboard/DateFilter'
 import { exportToCSV, formatDateTimeForCSV } from '@/lib/utils/csv'
 import { toast } from 'sonner'
-import { format, subDays, startOfDay, endOfDay } from 'date-fns'
+import { format } from 'date-fns'
 import { 
   Search, 
   Download, 
   Eye,
   ChevronLeft,
   ChevronRight,
-  Calendar
 } from 'lucide-react'
 
 export function TransactionList() {
   const [search, setSearch] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<string>('all')
-  const [dateRange, setDateRange] = useState<string>('all')
+  const [dateFilter, setDateFilter] = useState<DateFilterOption>('today')
+  const [customDate, setCustomDate] = useState<Date>(new Date())
   const [page, setPage] = useState(1)
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
 
   const pageSize = 15
 
-  // Calculate date filters based on range
-  const getDateFilters = () => {
-    const now = new Date()
-    switch (dateRange) {
-      case 'today':
-        return {
-          dateFrom: startOfDay(now).toISOString(),
-          dateTo: endOfDay(now).toISOString(),
-        }
-      case 'week':
-        return {
-          dateFrom: startOfDay(subDays(now, 7)).toISOString(),
-          dateTo: endOfDay(now).toISOString(),
-        }
-      case 'month':
-        return {
-          dateFrom: startOfDay(subDays(now, 30)).toISOString(),
-          dateTo: endOfDay(now).toISOString(),
-        }
-      default:
-        return {}
-    }
-  }
+  const dateRange = useMemo(() => getDateRange(dateFilter, customDate), [dateFilter, customDate])
 
   const { data, isLoading } = useTransactions({ 
     search, 
     paymentMethod: paymentMethod === 'all' ? undefined : paymentMethod,
-    ...getDateFilters(),
+    dateFrom: dateRange.startDate.toISOString(),
+    dateTo: dateRange.endDate.toISOString(),
     page,
     pageSize
   })
@@ -127,7 +107,7 @@ export function TransactionList() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 flex-wrap">
+      <div className="flex gap-4 flex-wrap" data-tour="transactions-filters">
         <div className="flex-1 min-w-[200px] relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -141,21 +121,18 @@ export function TransactionList() {
           />
         </div>
         
-        <Select value={dateRange} onValueChange={(value) => {
-          setDateRange(value)
-          setPage(1)
-        }}>
-          <SelectTrigger className="w-[180px]">
-            <Calendar className="h-4 w-4 mr-2" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Time</SelectItem>
-            <SelectItem value="today">Today</SelectItem>
-            <SelectItem value="week">Last 7 Days</SelectItem>
-            <SelectItem value="month">Last 30 Days</SelectItem>
-          </SelectContent>
-        </Select>
+        <DateFilter 
+          value={dateFilter} 
+          onChange={(value) => {
+            setDateFilter(value)
+            setPage(1)
+          }}
+          customDate={customDate}
+          onCustomDateChange={(date) => {
+            setCustomDate(date)
+            setPage(1)
+          }}
+        />
 
         <Select value={paymentMethod} onValueChange={(value) => {
           setPaymentMethod(value)
@@ -182,7 +159,7 @@ export function TransactionList() {
       ) : !data?.transactions || data.transactions.length === 0 ? (
         <div className="text-center py-12 bg-card border border-border rounded-lg">
           <p className="text-muted-foreground">
-            {search || paymentMethod !== 'all' || dateRange !== 'all' 
+            {search || paymentMethod !== 'all'
               ? 'No transactions found matching your filters' 
               : 'No transactions yet'}
           </p>

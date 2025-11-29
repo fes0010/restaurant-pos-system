@@ -3,7 +3,6 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { TransactionList } from '@/components/transactions/TransactionList'
-import { TourHelpButton } from '@/components/tour/TourHelpButton'
 
 export default function TransactionsPage() {
   return (
@@ -19,8 +18,6 @@ export default function TransactionsPage() {
 
           <TransactionList />
         </div>
-        
-        <TourHelpButton pageId="transactions" />
       </AppLayout>
     </ProtectedRoute>
   )

@@ -43,7 +43,7 @@ export function ReceiptPrint({ transactionId, autoPrint = false }: ReceiptPrintP
     <div className="max-w-sm mx-auto p-6 font-mono text-sm">
       {/* Header */}
       <div className="text-center mb-6">
-        <h1 className="text-xl font-bold mb-2">{tenant?.name || 'Restaurant POS'}</h1>
+        <h1 className="text-xl font-bold mb-2">{tenant?.name || 'Smart POS'}</h1>
         <div className="text-xs text-muted-foreground">
           <div>SALES RECEIPT</div>
           <div className="mt-2">{format(new Date(transaction.created_at), 'MMM dd, yyyy HH:mm')}</div>

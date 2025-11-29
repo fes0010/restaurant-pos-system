@@ -3,7 +3,6 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { PurchaseOrderList } from '@/components/purchase-orders/PurchaseOrderList'
-import { TourHelpButton } from '@/components/tour/TourHelpButton'
 
 export default function PurchaseOrdersPage() {
   return (
@@ -19,8 +18,6 @@ export default function PurchaseOrdersPage() {
 
           <PurchaseOrderList />
         </div>
-        
-        <TourHelpButton pageId="purchase-orders" />
       </AppLayout>
     </ProtectedRoute>
   )

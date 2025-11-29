@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useReturns } from '@/hooks/useReturns'
 import { Return } from '@/lib/services/returns'
@@ -12,6 +12,7 @@ import { MonetaryValue } from '@/components/ui/value-display'
 import { Card } from '@/components/ui/card'
 import { CreateReturnModal } from './CreateReturnModal'
 import { ReturnDetailsModal } from './ReturnDetailsModal'
+import { DateFilter, DateFilterOption, getDateRange } from '@/components/dashboard/DateFilter'
 import { format } from 'date-fns'
 import {
   Search,
@@ -48,14 +49,20 @@ export function ReturnsList() {
   
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
+  const [dateFilter, setDateFilter] = useState<DateFilterOption>('last30days')
+  const [customDate, setCustomDate] = useState<Date>(new Date())
   const [page, setPage] = useState(1)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedReturn, setSelectedReturn] = useState<Return | null>(null)
   const [preselectedTransactionId, setPreselectedTransactionId] = useState<string | undefined>()
 
+  const dateRange = useMemo(() => getDateRange(dateFilter, customDate), [dateFilter, customDate])
+
   const { data: returnsData, isLoading } = useReturns({
     search: search || undefined,
     status: status || undefined,
+    dateFrom: dateRange.startDate.toISOString(),
+    dateTo: dateRange.endDate.toISOString(),
     page,
     pageSize: 20,
   })
@@ -89,9 +96,9 @@ export function ReturnsList() {
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
-        <div className="flex gap-4">
-          <div className="flex-1">
+      <Card className="p-4" data-tour="returns-filters">
+        <div className="flex gap-4 flex-wrap">
+          <div className="flex-1 min-w-[200px]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -102,10 +109,25 @@ export function ReturnsList() {
               />
             </div>
           </div>
+          <DateFilter 
+            value={dateFilter} 
+            onChange={(value) => {
+              setDateFilter(value)
+              setPage(1)
+            }}
+            customDate={customDate}
+            onCustomDateChange={(date) => {
+              setCustomDate(date)
+              setPage(1)
+            }}
+          />
           <div className="w-48">
             <select
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={(e) => {
+                setStatus(e.target.value)
+                setPage(1)
+              }}
               className="w-full px-3 py-2 border border-input rounded-md bg-background"
             >
               <option value="">All Status</option>

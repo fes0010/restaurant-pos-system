@@ -11,14 +11,14 @@ import { Toaster } from "@/components/ui/toaster";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Restaurant POS System",
-  description: "Point of Sale system for restaurants and fast food businesses",
+  title: "Smart POS - Point of Sale System",
+  description: "Smart Point of Sale system for businesses",
   manifest: "/manifest.json",
   themeColor: "#000000",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Restaurant POS",
+    title: "Smart POS",
   },
   viewport: {
     width: "device-width",
