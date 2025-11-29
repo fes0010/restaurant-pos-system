@@ -13,7 +13,7 @@ import { DollarSign, TrendingUp, ShoppingCart, AlertTriangle } from 'lucide-reac
 
 export default function DashboardPage() {
   const { user, tenant } = useAuth()
-  const [dateFilter, setDateFilter] = useState<DateFilterOption>('today')
+  const [dateFilter, setDateFilter] = useState<DateFilterOption>('all')
   const [customDate, setCustomDate] = useState<Date>(new Date())
   
   const dateRange = useMemo(() => getDateRange(dateFilter, customDate), [dateFilter, customDate])
@@ -28,6 +28,7 @@ export default function DashboardPage() {
 
   const getDateDescription = () => {
     const labels: Record<DateFilterOption, string> = {
+      all: "",
       today: "today",
       yesterday: "yesterday",
       last7days: "the last 7 days",

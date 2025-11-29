@@ -49,7 +49,7 @@ export function ReturnsList() {
   
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
-  const [dateFilter, setDateFilter] = useState<DateFilterOption>('last30days')
+  const [dateFilter, setDateFilter] = useState<DateFilterOption>('all')
   const [customDate, setCustomDate] = useState<Date>(new Date())
   const [page, setPage] = useState(1)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -61,8 +61,8 @@ export function ReturnsList() {
   const { data: returnsData, isLoading } = useReturns({
     search: search || undefined,
     status: status || undefined,
-    dateFrom: dateRange.startDate.toISOString(),
-    dateTo: dateRange.endDate.toISOString(),
+    dateFrom: dateRange.startDate?.toISOString(),
+    dateTo: dateRange.endDate?.toISOString(),
     page,
     pageSize: 20,
   })

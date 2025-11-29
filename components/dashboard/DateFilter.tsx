@@ -12,6 +12,7 @@ import { DatePicker } from '@/components/ui/date-picker'
 import { startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths, isValid } from 'date-fns'
 
 export type DateFilterOption = 
+  | 'all'
   | 'today'
   | 'yesterday'
   | 'last7days'
@@ -23,14 +24,16 @@ export type DateFilterOption =
   | 'custom'
 
 interface DateRange {
-  startDate: Date
-  endDate: Date
+  startDate?: Date
+  endDate?: Date
 }
 
 export function getDateRange(option: DateFilterOption, customDate?: Date): DateRange {
   const now = new Date()
   
   switch (option) {
+    case 'all':
+      return { startDate: undefined, endDate: undefined }
     case 'today':
       return { startDate: startOfDay(now), endDate: endOfDay(now) }
     case 'yesterday':
@@ -57,11 +60,12 @@ export function getDateRange(option: DateFilterOption, customDate?: Date): DateR
       }
       return { startDate: startOfDay(now), endDate: endOfDay(now) }
     default:
-      return { startDate: startOfDay(now), endDate: endOfDay(now) }
+      return { startDate: undefined, endDate: undefined }
   }
 }
 
 const filterOptions: { value: DateFilterOption; label: string }[] = [
+  { value: 'all', label: 'All Time' },
   { value: 'today', label: 'Today' },
   { value: 'yesterday', label: 'Yesterday' },
   { value: 'last7days', label: 'Last 7 Days' },

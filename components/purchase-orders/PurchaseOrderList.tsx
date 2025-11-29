@@ -17,7 +17,7 @@ import { Plus, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
 
 export function PurchaseOrderList() {
   const [status, setStatus] = useState<string>('all')
-  const [dateFilter, setDateFilter] = useState<DateFilterOption>('last30days')
+  const [dateFilter, setDateFilter] = useState<DateFilterOption>('all')
   const [customDate, setCustomDate] = useState<Date>(new Date())
   const [page, setPage] = useState(1)
   const [selectedPO, setSelectedPO] = useState<any>(null)
@@ -29,8 +29,8 @@ export function PurchaseOrderList() {
   
   const { data, isLoading } = usePurchaseOrders({ 
     status: status === 'all' ? undefined : status, 
-    dateFrom: dateRange.startDate.toISOString(),
-    dateTo: dateRange.endDate.toISOString(),
+    dateFrom: dateRange.startDate?.toISOString(),
+    dateTo: dateRange.endDate?.toISOString(),
     page, 
     pageSize 
   })

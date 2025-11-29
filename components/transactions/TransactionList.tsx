@@ -27,7 +27,7 @@ import {
 export function TransactionList() {
   const [search, setSearch] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<string>('all')
-  const [dateFilter, setDateFilter] = useState<DateFilterOption>('today')
+  const [dateFilter, setDateFilter] = useState<DateFilterOption>('all')
   const [customDate, setCustomDate] = useState<Date>(new Date())
   const [page, setPage] = useState(1)
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
@@ -40,8 +40,8 @@ export function TransactionList() {
   const { data, isLoading } = useTransactions({ 
     search, 
     paymentMethod: paymentMethod === 'all' ? undefined : paymentMethod,
-    dateFrom: dateRange.startDate.toISOString(),
-    dateTo: dateRange.endDate.toISOString(),
+    dateFrom: dateRange.startDate?.toISOString(),
+    dateTo: dateRange.endDate?.toISOString(),
     page,
     pageSize
   })
