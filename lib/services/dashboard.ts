@@ -36,16 +36,24 @@ export async function getDashboardKPIs(
   const previousStart = new Date(currentStart.getTime() - periodLength)
   const previousEnd = currentStart
 
-  // Fetch current period transactions
-  const { data: currentTransactions } = await supabase
+  // Build transaction query
+  let transactionQuery = supabase
     .from('transactions')
     .select('total, subtotal, transaction_items(quantity, unit_price, product_id, products(cost))')
     .eq('tenant_id', tenantId)
     .eq('status', 'completed')
-    .gte('created_at', currentStart.toISOString())
-    .lte('created_at', currentEnd.toISOString())
 
-  // Fetch previous period transactions
+  // Only apply date filters if dates are provided
+  if (startDate) {
+    transactionQuery = transactionQuery.gte('created_at', currentStart.toISOString())
+  }
+  if (endDate) {
+    transactionQuery = transactionQuery.lte('created_at', currentEnd.toISOString())
+  }
+
+  const { data: currentTransactions } = await transactionQuery
+
+  // Fetch previous period transactions for comparison
   const { data: previousTransactions } = await supabase
     .from('transactions')
     .select('total')
@@ -54,21 +62,55 @@ export async function getDashboardKPIs(
     .gte('created_at', previousStart.toISOString())
     .lte('created_at', previousEnd.toISOString())
 
+  // Fetch approved returns for the current period to subtract from revenue
+  let returnsQuery = supabase
+    .from('returns')
+    .select('total_amount, return_items(quantity, unit_price, product_id, products(cost))')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'approved')
+
+  // Only apply date filters if dates are provided
+  if (startDate) {
+    returnsQuery = returnsQuery.gte('approved_at', currentStart.toISOString())
+  }
+  if (endDate) {
+    returnsQuery = returnsQuery.lte('approved_at', currentEnd.toISOString())
+  }
+
+  const { data: approvedReturns } = await returnsQuery
+
+  // Calculate total returns amount
+  const totalReturnsAmount = approvedReturns?.reduce((sum, r) => sum + Number(r.total_amount), 0) || 0
+
+  // Calculate returns profit loss (the profit we lose from returns)
+  let returnsProfitLoss = 0
+  approvedReturns?.forEach((returnItem: any) => {
+    const items = returnItem.return_items || []
+    items.forEach((item: any) => {
+      const cost = item.products?.cost || 0
+      const revenue = Number(item.unit_price) * Number(item.quantity)
+      const itemCost = Number(cost) * Number(item.quantity)
+      returnsProfitLoss += revenue - itemCost
+    })
+  })
+
   // Calculate current period metrics
-  const totalRevenue = currentTransactions?.reduce((sum, t) => sum + Number(t.total), 0) || 0
+  const grossRevenue = currentTransactions?.reduce((sum, t) => sum + Number(t.total), 0) || 0
+  const totalRevenue = grossRevenue - totalReturnsAmount
   const totalSales = currentTransactions?.length || 0
 
-  // Calculate profit (revenue - cost)
-  let totalProfit = 0
+  // Calculate profit (revenue - cost) minus returns profit loss
+  let grossProfit = 0
   currentTransactions?.forEach((transaction: any) => {
     const items = transaction.transaction_items || []
     items.forEach((item: any) => {
       const cost = item.products?.cost || 0
       const revenue = Number(item.unit_price) * Number(item.quantity)
       const itemCost = Number(cost) * Number(item.quantity)
-      totalProfit += revenue - itemCost
+      grossProfit += revenue - itemCost
     })
   })
+  const totalProfit = grossProfit - returnsProfitLoss
 
   // Calculate previous period metrics for comparison
   const previousRevenue = previousTransactions?.reduce((sum, t) => sum + Number(t.total), 0) || 0
