@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,10 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CartItem } from './Cart'
 import { Customer } from '@/types'
 import { useCreateTransaction } from '@/hooks/useTransactions'
-import { useCustomerCreditStatus } from '@/hooks/useCustomers'
+import { useCustomerCreditStatus, useCustomers } from '@/hooks/useCustomers'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Search, X, User } from 'lucide-react'
 
 interface CheckoutModalProps {
   open: boolean
@@ -22,6 +22,7 @@ interface CheckoutModalProps {
   discount: number
   total: number
   customer: Customer | null
+  onCustomerChange?: (customer: Customer | null) => void
   onSuccess: (transactionId: string) => void
 }
 
@@ -33,15 +34,49 @@ export function CheckoutModal({
   discount,
   total,
   customer,
+  onCustomerChange,
   onSuccess,
 }: CheckoutModalProps) {
   const { user } = useAuth()
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'mpesa' | 'bank' | 'debt'>('cash')
   const [amountReceived, setAmountReceived] = useState<number>(total)
   const createTransaction = useCreateTransaction()
+  
+  // Customer search state
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  
+  // Fetch customers for search
+  const { data: customersData, isLoading: customersLoading } = useCustomers({ 
+    search: customerSearch, 
+    pageSize: 10 
+  })
 
   // Fetch real-time credit status when customer is selected
   const { data: creditStatus, isLoading: creditLoading } = useCustomerCreditStatus(customer?.id || '')
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchInputRef.current && !searchInputRef.current.contains(e.target as Node)) {
+        setShowCustomerDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+  
+  const handleSelectCustomer = (selectedCustomer: Customer) => {
+    onCustomerChange?.(selectedCustomer)
+    setCustomerSearch('')
+    setShowCustomerDropdown(false)
+  }
+  
+  const handleClearCustomer = () => {
+    onCustomerChange?.(null)
+    setCustomerSearch('')
+  }
   
   const change = paymentMethod === 'cash' ? Math.max(0, amountReceived - total) : 0
   const isValidPayment = paymentMethod !== 'cash' || amountReceived >= total
@@ -184,68 +219,132 @@ export function CheckoutModal({
           {/* Debt Payment Info */}
           {paymentMethod === 'debt' && (
             <>
-              {!customer ? (
-                <div className="border border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800 rounded-lg p-4">
-                  <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                    A customer must be selected for debt payments
-                  </p>
-                  <p className="text-xs text-red-500 dark:text-red-500 mt-1">
-                    Please go back and select a customer before proceeding with debt payment.
-                  </p>
-                </div>
-              ) : creditLoading ? (
-                <div className="border rounded-lg p-4 bg-muted/50">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-sm text-muted-foreground">Loading credit information...</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="border border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800 rounded-lg p-4 space-y-2">
-                  <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Credit Information</p>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Credit Approved</span>
-                      <span className={isCustomerCreditApproved ? 'text-green-600' : 'text-red-600'}>
-                        {isCustomerCreditApproved ? 'Yes' : 'No'}
-                      </span>
+              {/* Customer Selection */}
+              <div className="space-y-2">
+                <Label>Customer for Debt *</Label>
+                {customer ? (
+                  <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{customer.name}</p>
+                        {customer.phone && <p className="text-xs text-muted-foreground">{customer.phone}</p>}
+                      </div>
                     </div>
-                    {isCustomerCreditApproved && (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Credit Limit</span>
-                          <span>{formatCurrency(creditLimit)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Outstanding Debt</span>
-                          <span className="text-orange-600">{formatCurrency(outstandingDebt)}</span>
-                        </div>
-                        <div className="flex justify-between font-medium pt-1 border-t">
-                          <span>Available Credit</span>
-                          <span className={availableCredit >= total ? 'text-green-600' : 'text-red-600'}>
-                            {formatCurrency(availableCredit)}
-                          </span>
-                        </div>
-                        {availableCredit >= total && (
-                          <div className="flex justify-between text-xs pt-1">
-                            <span className="text-muted-foreground">After this sale</span>
-                            <span className="text-muted-foreground">{formatCurrency(availableCredit - total)}</span>
+                    <Button variant="ghost" size="sm" onClick={handleClearCustomer}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="relative" ref={searchInputRef}>
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search customers by name or phone..."
+                      value={customerSearch}
+                      onChange={(e) => {
+                        setCustomerSearch(e.target.value)
+                        setShowCustomerDropdown(true)
+                      }}
+                      onFocus={() => setShowCustomerDropdown(true)}
+                      className="pl-9"
+                    />
+                    {showCustomerDropdown && (
+                      <div className="absolute z-50 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {customersLoading ? (
+                          <div className="p-3 text-center text-sm text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                            Searching...
+                          </div>
+                        ) : customersData?.customers && customersData.customers.length > 0 ? (
+                          customersData.customers.map((c) => (
+                            <button
+                              key={c.id}
+                              className="w-full px-3 py-2 text-left hover:bg-muted flex items-center gap-2 border-b last:border-0"
+                              onClick={() => handleSelectCustomer(c)}
+                            >
+                              <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                <User className="h-3 w-3 text-primary" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm truncate">{c.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {c.phone || c.email || 'No contact'}
+                                  {c.is_credit_approved && (
+                                    <span className="ml-2 text-green-600">• Credit Approved</span>
+                                  )}
+                                </p>
+                              </div>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-3 text-center text-sm text-muted-foreground">
+                            {customerSearch ? 'No customers found' : 'Type to search customers'}
                           </div>
                         )}
-                      </>
+                      </div>
                     )}
                   </div>
-                  {!isCustomerCreditApproved && (
-                    <p className="text-xs text-red-500 mt-2">
-                      This customer is not approved for credit. Please approve them in the Customers page first.
-                    </p>
-                  )}
-                  {isCustomerCreditApproved && availableCredit < total && (
-                    <p className="text-xs text-red-500 mt-2">
-                      This sale exceeds the customer's available credit limit.
-                    </p>
-                  )}
-                </div>
+                )}
+              </div>
+
+              {/* Credit Information */}
+              {customer && (
+                creditLoading ? (
+                  <div className="border rounded-lg p-4 bg-muted/50">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-sm text-muted-foreground">Loading credit information...</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800 rounded-lg p-4 space-y-2">
+                    <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Credit Information</p>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Credit Approved</span>
+                        <span className={isCustomerCreditApproved ? 'text-green-600' : 'text-red-600'}>
+                          {isCustomerCreditApproved ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                      {isCustomerCreditApproved && (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Credit Limit</span>
+                            <span>{formatCurrency(creditLimit)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Outstanding Debt</span>
+                            <span className="text-orange-600">{formatCurrency(outstandingDebt)}</span>
+                          </div>
+                          <div className="flex justify-between font-medium pt-1 border-t">
+                            <span>Available Credit</span>
+                            <span className={availableCredit >= total ? 'text-green-600' : 'text-red-600'}>
+                              {formatCurrency(availableCredit)}
+                            </span>
+                          </div>
+                          {availableCredit >= total && (
+                            <div className="flex justify-between text-xs pt-1">
+                              <span className="text-muted-foreground">After this sale</span>
+                              <span className="text-muted-foreground">{formatCurrency(availableCredit - total)}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    {!isCustomerCreditApproved && (
+                      <p className="text-xs text-red-500 mt-2">
+                        This customer is not approved for credit. Please approve them in the Customers page first.
+                      </p>
+                    )}
+                    {isCustomerCreditApproved && availableCredit < total && (
+                      <p className="text-xs text-red-500 mt-2">
+                        This sale exceeds the customer's available credit limit.
+                      </p>
+                    )}
+                  </div>
+                )
               )}
             </>
           )}

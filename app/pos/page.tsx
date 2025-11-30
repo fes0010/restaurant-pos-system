@@ -266,6 +266,7 @@ export default function POSPage() {
           discount={discount}
           total={total}
           customer={selectedCustomer}
+          onCustomerChange={setSelectedCustomer}
           onSuccess={handleCheckoutSuccess}
         />
 
