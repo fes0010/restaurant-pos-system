@@ -8,6 +8,9 @@ export interface DashboardKPIs {
   revenueChange: number
   profitChange: number
   salesChange: number
+  grossRevenue: number
+  totalReturns: number
+  totalExpenses: number
 }
 
 export interface LowStockProduct {
@@ -94,12 +97,30 @@ export async function getDashboardKPIs(
     })
   })
 
+  // Fetch expenses for the period
+  let expensesQuery = supabase
+    .from('expenses')
+    .select('amount, expense_date')
+    .eq('tenant_id', tenantId)
+
+  if (startDate) {
+    expensesQuery = expensesQuery.gte('expense_date', currentStart.toISOString().split('T')[0])
+  }
+  if (endDate) {
+    expensesQuery = expensesQuery.lte('expense_date', currentEnd.toISOString().split('T')[0])
+  }
+
+  const { data: expenses } = await expensesQuery
+  const totalExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0
+
   // Calculate current period metrics
   const grossRevenue = currentTransactions?.reduce((sum, t) => sum + Number(t.total), 0) || 0
-  const totalRevenue = grossRevenue - totalReturnsAmount
+  const totalRevenue = grossRevenue - totalReturnsAmount - totalExpenses
   const totalSales = currentTransactions?.length || 0
 
-  // Calculate profit (revenue - cost) minus returns profit loss
+  // Calculate profit (revenue - cost) minus returns profit loss minus expenses
+  // Note: For profit, we subtract the profit lost from returns (not the full return amount)
+  // because when a return happens, we get the product back (recover the cost)
   let grossProfit = 0
   currentTransactions?.forEach((transaction: any) => {
     const items = transaction.transaction_items || []
@@ -110,7 +131,7 @@ export async function getDashboardKPIs(
       grossProfit += revenue - itemCost
     })
   })
-  const totalProfit = grossProfit - returnsProfitLoss
+  const totalProfit = grossProfit - returnsProfitLoss - totalExpenses
 
   // Calculate previous period metrics for comparison
   const previousRevenue = previousTransactions?.reduce((sum, t) => sum + Number(t.total), 0) || 0
@@ -141,6 +162,9 @@ export async function getDashboardKPIs(
     revenueChange,
     profitChange,
     salesChange,
+    grossRevenue,
+    totalReturns: totalReturnsAmount,
+    totalExpenses,
   }
 }
 
@@ -252,6 +276,7 @@ export interface DailySummary {
   grossSales: number
   grossProfit: number
   returns: number
+  returnsProfitLoss: number
   expenses: number
   transactionCount: number
 }
@@ -291,13 +316,25 @@ export async function getDailySummary(tenantId: string): Promise<DailySummary> {
   // Fetch today's approved returns (by approval date for daily tracking)
   const { data: returns } = await supabase
     .from('returns')
-    .select('total_amount')
+    .select('total_amount, return_items(quantity, unit_price, product_id, products(cost))')
     .eq('tenant_id', tenantId)
     .eq('status', 'approved')
     .gte('approved_at', startOfDay.toISOString())
     .lte('approved_at', endOfDay.toISOString())
 
-  const totalReturns = returns?.reduce((sum, r) => sum + Number(r.total_amount), 0) || 0
+  let totalReturns = 0
+  let returnsProfitLoss = 0
+  
+  returns?.forEach((returnItem: any) => {
+    totalReturns += Number(returnItem.total_amount)
+    const items = returnItem.return_items || []
+    items.forEach((item: any) => {
+      const cost = item.products?.cost || 0
+      const revenue = Number(item.unit_price) * Number(item.quantity)
+      const itemCost = Number(cost) * Number(item.quantity)
+      returnsProfitLoss += revenue - itemCost
+    })
+  })
 
   // Fetch today's expenses
   const { data: expenses } = await supabase
@@ -313,6 +350,7 @@ export async function getDailySummary(tenantId: string): Promise<DailySummary> {
     grossSales,
     grossProfit,
     returns: totalReturns,
+    returnsProfitLoss,
     expenses: totalExpenses,
     transactionCount: transactions?.length || 0,
   }

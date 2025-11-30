@@ -21,9 +21,11 @@ export function DailySummaryCard() {
 
   const grossSales = summary?.grossSales ?? 0
   const returns = summary?.returns ?? 0
+  const returnsProfitLoss = summary?.returnsProfitLoss ?? 0
   const expenses = summary?.expenses ?? 0
   const netRevenue = grossSales - returns - expenses
-  const netProfit = (summary?.grossProfit ?? 0) - returns - expenses
+  // For profit, subtract profit loss from returns (not full return amount) since we recover the cost
+  const netProfit = (summary?.grossProfit ?? 0) - returnsProfitLoss - expenses
 
   return (
     <Card className="p-5">
