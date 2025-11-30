@@ -48,6 +48,10 @@ export function useCreateReturn() {
       createReturn(tenant!.id, user!.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['returns'] })
+      // Invalidate dashboard in case it shows pending returns count
+      queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === 'dashboard-kpis'
+      })
     },
   })
 }
@@ -59,13 +63,17 @@ export function useApproveReturn() {
   return useMutation({
     mutationFn: (returnId: string) => approveReturn(returnId, user!.id),
     onSuccess: () => {
+      // Invalidate all related queries to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ['returns'] })
       queryClient.invalidateQueries({ queryKey: ['products'] })
       queryClient.invalidateQueries({ queryKey: ['stock-history'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard-kpis'] })
-      queryClient.refetchQueries({ queryKey: ['returns'], type: 'active' })
-      queryClient.refetchQueries({ queryKey: ['products'], type: 'active' })
-      queryClient.refetchQueries({ queryKey: ['dashboard'], type: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['low-stock-products'] })
+      // Use partial matching for dashboard-kpis since it has dynamic params
+      queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === 'dashboard-kpis'
+      })
+      queryClient.invalidateQueries({ queryKey: ['sales-trend'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
     },
   })
 }
@@ -78,6 +86,10 @@ export function useRejectReturn() {
     mutationFn: (returnId: string) => rejectReturn(returnId, user!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['returns'] })
+      // Invalidate dashboard in case it shows pending returns count
+      queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === 'dashboard-kpis'
+      })
     },
   })
 }
@@ -88,13 +100,17 @@ export function useRevertReturnToPending() {
   return useMutation({
     mutationFn: (returnId: string) => revertReturnToPending(returnId),
     onSuccess: () => {
+      // Invalidate all related queries to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ['returns'] })
       queryClient.invalidateQueries({ queryKey: ['products'] })
       queryClient.invalidateQueries({ queryKey: ['stock-history'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard-kpis'] })
-      queryClient.refetchQueries({ queryKey: ['returns'], type: 'active' })
-      queryClient.refetchQueries({ queryKey: ['products'], type: 'active' })
-      queryClient.refetchQueries({ queryKey: ['dashboard'], type: 'active' })
+      queryClient.invalidateQueries({ queryKey: ['low-stock-products'] })
+      // Use partial matching for dashboard-kpis since it has dynamic params
+      queryClient.invalidateQueries({ 
+        predicate: (query) => query.queryKey[0] === 'dashboard-kpis'
+      })
+      queryClient.invalidateQueries({ queryKey: ['sales-trend'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
     },
   })
 }
