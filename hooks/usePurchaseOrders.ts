@@ -7,6 +7,7 @@ import {
   updatePurchaseOrder,
   updatePurchaseOrderStatus,
   restockFromPurchaseOrder,
+  getSuppliers,
   CreatePurchaseOrderInput,
   UpdatePurchaseOrderInput,
 } from '@/lib/services/purchase-orders'
@@ -65,14 +66,17 @@ export function useUpdatePurchaseOrder() {
 }
 
 export function useUpdatePurchaseOrderStatus() {
+  const { tenant, user } = useAuth()
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: 'draft' | 'ordered' | 'received' | 'completed' }) =>
-      updatePurchaseOrderStatus(id, status),
+      updatePurchaseOrderStatus(id, status, tenant?.id, user?.id),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['purchase-orders'] })
       queryClient.invalidateQueries({ queryKey: ['purchase-order', data.id] })
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }
@@ -91,5 +95,15 @@ export function useRestockFromPurchaseOrder() {
       queryClient.refetchQueries({ queryKey: ['products'], type: 'active' })
       queryClient.refetchQueries({ queryKey: ['dashboard'], type: 'active' })
     },
+  })
+}
+
+export function useSuppliers() {
+  const { tenant } = useAuth()
+
+  return useQuery({
+    queryKey: ['suppliers', tenant?.id],
+    queryFn: () => getSuppliers(tenant!.id),
+    enabled: !!tenant,
   })
 }

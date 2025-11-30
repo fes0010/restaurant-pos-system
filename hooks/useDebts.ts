@@ -56,6 +56,8 @@ export function useDebts(filters?: DebtFilters) {
         () => {
           queryClient.invalidateQueries({ queryKey: ['debts'] })
           queryClient.invalidateQueries({ queryKey: ['debt-summary'] })
+          queryClient.invalidateQueries({ queryKey: ['debts-by-customer'] })
+          queryClient.invalidateQueries({ queryKey: ['debt-transaction'] })
           queryClient.invalidateQueries({ queryKey: ['payment-history'] })
         }
       )

@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useProducts } from '@/hooks/useProducts'
-import { useCreatePurchaseOrder, useUpdatePurchaseOrder } from '@/hooks/usePurchaseOrders'
+import { useCreatePurchaseOrder, useUpdatePurchaseOrder, useSuppliers } from '@/hooks/usePurchaseOrders'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, UserPlus } from 'lucide-react'
 
 interface PurchaseOrderFormProps {
   po?: any
@@ -23,11 +23,26 @@ export function PurchaseOrderForm({ po, open, onOpenChange }: PurchaseOrderFormP
   const [expectedDelivery, setExpectedDelivery] = useState('')
   const [notes, setNotes] = useState('')
   const [items, setItems] = useState<any[]>([])
+  const [isNewSupplier, setIsNewSupplier] = useState(false)
 
   const { data: productsData } = useProducts({ pageSize: 100 })
+  const { data: suppliers = [] } = useSuppliers()
   const products = productsData?.products || []
   const createPO = useCreatePurchaseOrder()
   const updatePO = useUpdatePurchaseOrder()
+
+  const handleSupplierSelect = (supplierNameValue: string) => {
+    if (supplierNameValue === '__new__') {
+      setIsNewSupplier(true)
+      setSupplierName('')
+      setSupplierContact('')
+    } else {
+      setIsNewSupplier(false)
+      setSupplierName(supplierNameValue)
+      const supplier = suppliers.find(s => s.name === supplierNameValue)
+      setSupplierContact(supplier?.contact || '')
+    }
+  }
 
   useEffect(() => {
     if (po) {
@@ -36,14 +51,16 @@ export function PurchaseOrderForm({ po, open, onOpenChange }: PurchaseOrderFormP
       setExpectedDelivery(po.expected_delivery_date.split('T')[0])
       setNotes(po.notes || '')
       setItems(po.items || [])
+      setIsNewSupplier(false)
     } else {
       setSupplierName('')
       setSupplierContact('')
       setExpectedDelivery('')
       setNotes('')
       setItems([])
+      setIsNewSupplier(suppliers.length === 0)
     }
-  }, [po, open])
+  }, [po, open, suppliers.length])
 
   const addItem = () => {
     setItems([...items, { product_id: '', product_name: '', quantity: 1, cost_per_unit: 0 }])
@@ -111,15 +128,46 @@ export function PurchaseOrderForm({ po, open, onOpenChange }: PurchaseOrderFormP
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Supplier Name *</Label>
-              <Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} required />
-            </div>
-            <div>
-              <Label>Supplier Contact</Label>
-              <Input value={supplierContact} onChange={(e) => setSupplierContact(e.target.value)} />
-            </div>
+          <div className="space-y-4">
+            {suppliers.length > 0 && !po && (
+              <div>
+                <Label>Select Supplier</Label>
+                <Select 
+                  value={isNewSupplier ? '__new__' : supplierName} 
+                  onValueChange={handleSupplierSelect}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose existing or add new" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier.name} value={supplier.name}>
+                        {supplier.name} {supplier.contact && `(${supplier.contact})`}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__new__">
+                      <span className="flex items-center gap-2">
+                        <UserPlus className="h-4 w-4" />
+                        Add New Supplier
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {(isNewSupplier || suppliers.length === 0 || po) && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Supplier Name *</Label>
+                  <Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} required />
+                </div>
+                <div>
+                  <Label>Supplier Contact</Label>
+                  <Input value={supplierContact} onChange={(e) => setSupplierContact(e.target.value)} />
+                </div>
+              </div>
+            )}
           </div>
 
           <div>

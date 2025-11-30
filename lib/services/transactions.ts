@@ -40,6 +40,8 @@ export async function createTransaction(
       total: input.total,
       payment_method: input.payment_method,
       status: input.payment_method === 'debt' ? 'debt_pending' : 'completed',
+      // Set outstanding_balance to total for debt payments, 0 for completed payments
+      outstanding_balance: input.payment_method === 'debt' ? input.total : 0,
       created_by: userId,
     } as any)
     .select()

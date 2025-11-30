@@ -22,8 +22,9 @@ interface DebtListProps {
   onSelectDebt?: (debt: DebtTransaction) => void
 }
 
-function formatCurrency(amount: number) {
-  return `KSH ${amount.toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+function formatCurrency(amount: number | null | undefined) {
+  const value = amount ?? 0
+  return `KSH ${value.toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 }
 
 function formatDate(dateString: string) {
@@ -93,37 +94,88 @@ export function DebtList({ onSelectDebt }: DebtListProps) {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Mobile Card View */}
+      <div className="block md:hidden">
+        {isLoading ? (
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />
+            ))}
+          </div>
+        ) : data?.debts.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground">
+            No outstanding debts found
+          </div>
+        ) : (
+          <div className="divide-y">
+            {data?.debts.map((debt) => (
+              <button
+                key={debt.id}
+                className="w-full p-4 text-left hover:bg-muted/50 transition-colors"
+                onClick={() => onSelectDebt?.(debt)}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium truncate">{debt.customer?.name || 'Walk-in'}</span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${getDaysOverdueColor(debt.days_overdue)} bg-current/10`}>
+                        {debt.days_overdue}d
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground font-mono">
+                      {debt.transaction_number}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDate(debt.created_at)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-orange-600 dark:text-orange-400">
+                      {formatCurrency(debt.outstanding_balance)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      of {formatCurrency(debt.total)}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead 
-                className="cursor-pointer hover:bg-muted/50"
+                className="cursor-pointer hover:bg-muted/50 whitespace-nowrap"
                 onClick={() => handleSort('date')}
               >
                 Date {filters.sortBy === 'date' && (filters.sortOrder === 'asc' ? '↑' : '↓')}
               </TableHead>
-              <TableHead>Transaction #</TableHead>
+              <TableHead className="whitespace-nowrap">Transaction #</TableHead>
               <TableHead 
-                className="cursor-pointer hover:bg-muted/50"
+                className="cursor-pointer hover:bg-muted/50 whitespace-nowrap"
                 onClick={() => handleSort('customer')}
               >
                 Customer {filters.sortBy === 'customer' && (filters.sortOrder === 'asc' ? '↑' : '↓')}
               </TableHead>
               <TableHead 
-                className="text-right cursor-pointer hover:bg-muted/50"
+                className="text-right cursor-pointer hover:bg-muted/50 whitespace-nowrap"
                 onClick={() => handleSort('amount')}
               >
                 Original {filters.sortBy === 'amount' && (filters.sortOrder === 'asc' ? '↑' : '↓')}
               </TableHead>
-              <TableHead className="text-right">Outstanding</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Outstanding</TableHead>
               <TableHead 
-                className="text-center cursor-pointer hover:bg-muted/50"
+                className="text-center cursor-pointer hover:bg-muted/50 whitespace-nowrap"
                 onClick={() => handleSort('daysOverdue')}
               >
                 Days {filters.sortBy === 'daysOverdue' && (filters.sortOrder === 'asc' ? '↑' : '↓')}
               </TableHead>
-              <TableHead className="text-center">Actions</TableHead>
+              <TableHead className="text-center whitespace-nowrap">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -146,22 +198,18 @@ export function DebtList({ onSelectDebt }: DebtListProps) {
             ) : (
               data?.debts.map((debt) => (
                 <TableRow key={debt.id}>
-                  <TableCell>{formatDate(debt.created_at)}</TableCell>
-                  <TableCell className="font-mono text-sm">{debt.transaction_number}</TableCell>
+                  <TableCell className="whitespace-nowrap">{formatDate(debt.created_at)}</TableCell>
+                  <TableCell className="font-mono text-sm whitespace-nowrap">{debt.transaction_number}</TableCell>
                   <TableCell>{debt.customer?.name || 'Walk-in'}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(debt.total)}</TableCell>
-                  <TableCell className="text-right font-semibold">
+                  <TableCell className="text-right whitespace-nowrap">{formatCurrency(debt.total)}</TableCell>
+                  <TableCell className="text-right font-semibold whitespace-nowrap">
                     {formatCurrency(debt.outstanding_balance)}
                   </TableCell>
-                  <TableCell className={`text-center font-medium ${getDaysOverdueColor(debt.days_overdue)}`}>
+                  <TableCell className={`text-center font-medium whitespace-nowrap ${getDaysOverdueColor(debt.days_overdue)}`}>
                     {debt.days_overdue}
                   </TableCell>
                   <TableCell className="text-center">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onSelectDebt?.(debt)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => onSelectDebt?.(debt)}>
                       <Eye className="h-4 w-4" />
                     </Button>
                   </TableCell>

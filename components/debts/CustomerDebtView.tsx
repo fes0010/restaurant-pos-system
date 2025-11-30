@@ -13,8 +13,9 @@ interface CustomerDebtViewProps {
   onSelectDebt?: (debt: DebtTransaction) => void
 }
 
-function formatCurrency(amount: number) {
-  return `KSH ${amount.toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+function formatCurrency(amount: number | null | undefined) {
+  const value = amount ?? 0
+  return `KSH ${value.toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 }
 
 function formatDate(dateString: string) {

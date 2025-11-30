@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
-import { getDashboardKPIs, getLowStockProducts, getSalesTrend } from '@/lib/services/dashboard'
+import { getDashboardKPIs, getLowStockProducts, getSalesTrend, getDailySummary } from '@/lib/services/dashboard'
 
 export function useDashboardKPIs(startDate?: Date, endDate?: Date) {
   const { tenant } = useAuth()
@@ -36,5 +36,19 @@ export function useSalesTrend(days: number = 30) {
     enabled: !!tenant,
     staleTime: 0,
     refetchOnMount: 'always',
+  })
+}
+
+
+export function useDailySummary() {
+  const { tenant } = useAuth()
+
+  return useQuery({
+    queryKey: ['daily-summary', tenant?.id],
+    queryFn: () => getDailySummary(tenant!.id),
+    enabled: !!tenant,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchInterval: 30000, // Refetch every 30 seconds
   })
 }

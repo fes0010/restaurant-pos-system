@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { SemanticBadge } from '@/components/ui/semantic-badge'
 import { MonetaryValue } from '@/components/ui/value-display'
-import { useUpdatePurchaseOrderStatus, useRestockFromPurchaseOrder } from '@/hooks/usePurchaseOrders'
+import { useUpdatePurchaseOrderStatus } from '@/hooks/usePurchaseOrders'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { ArrowRight, Package } from 'lucide-react'
@@ -18,7 +18,6 @@ interface PurchaseOrderDetailsProps {
 
 export function PurchaseOrderDetails({ po, open, onOpenChange }: PurchaseOrderDetailsProps) {
   const updateStatus = useUpdatePurchaseOrderStatus()
-  const restock = useRestockFromPurchaseOrder()
 
   const formatCurrency = (value: number) => {
     return `KSH ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -27,34 +26,31 @@ export function PurchaseOrderDetails({ po, open, onOpenChange }: PurchaseOrderDe
   const handleStatusChange = async (newStatus: any) => {
     try {
       await updateStatus.mutateAsync({ id: po.id, status: newStatus })
-      toast.success(`Status updated to ${newStatus}`)
+      if (newStatus === 'received') {
+        toast.success('Order received and inventory updated!')
+        onOpenChange(false)
+      } else {
+        toast.success(`Status updated to ${newStatus}`)
+      }
     } catch (error: any) {
       toast.error(error.message || 'Failed to update status')
-    }
-  }
-
-  const handleRestock = async () => {
-    if (!confirm('This will add all items to inventory. Continue?')) return
-    
-    try {
-      await restock.mutateAsync(po.id)
-      toast.success('Inventory restocked successfully')
-      onOpenChange(false)
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to restock inventory')
     }
   }
 
   const getNextStatus = () => {
     switch (po.status) {
       case 'draft': return 'ordered'
-      case 'ordered': return 'received'
-      case 'received': return 'completed'
+      case 'ordered': return 'received' // This will auto-restock and complete
       default: return null
     }
   }
 
   const nextStatus = getNextStatus()
+  
+  const getNextStatusLabel = () => {
+    if (po.status === 'ordered') return 'Receive & Add to Inventory'
+    return nextStatus ? `Mark as ${nextStatus}` : null
+  }
 
   const getStatusVariant = (status: string): 'success' | 'pending' | 'info' | 'inactive' => {
     switch (status) {
@@ -137,16 +133,25 @@ export function PurchaseOrderDetails({ po, open, onOpenChange }: PurchaseOrderDe
 
           <div className="flex gap-2">
             {nextStatus && (
-              <Button onClick={() => handleStatusChange(nextStatus)} disabled={updateStatus.isPending} className="flex-1">
-                <ArrowRight className="h-4 w-4 mr-2" />
-                Mark as {nextStatus}
+              <Button 
+                onClick={() => {
+                  if (po.status === 'ordered') {
+                    // Confirm before receiving since it will add to inventory
+                    if (!confirm('This will mark the order as received and add all items to inventory. Continue?')) return
+                  }
+                  handleStatusChange(nextStatus)
+                }} 
+                disabled={updateStatus.isPending} 
+                className="flex-1"
+              >
+                {po.status === 'ordered' ? <Package className="h-4 w-4 mr-2" /> : <ArrowRight className="h-4 w-4 mr-2" />}
+                {getNextStatusLabel()}
               </Button>
             )}
-            {po.status === 'received' && (
-              <Button onClick={handleRestock} disabled={restock.isPending} variant="outline" className="flex-1">
-                <Package className="h-4 w-4 mr-2" />
-                Restock Inventory
-              </Button>
+            {po.status === 'completed' && (
+              <div className="flex-1 text-center text-muted-foreground py-2">
+                Order completed - inventory has been updated
+              </div>
             )}
           </div>
         </div>

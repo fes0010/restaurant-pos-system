@@ -5,8 +5,9 @@ import { Card } from '@/components/ui/card'
 import { useDebtSummary } from '@/hooks/useDebts'
 import { useAuth } from '@/contexts/AuthContext'
 
-function formatCurrency(amount: number) {
-  return `KSH ${amount.toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+function formatCurrency(amount: number | null | undefined) {
+  const value = amount ?? 0
+  return `KSH ${value.toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 }
 
 export function DebtSummaryCards() {
@@ -42,18 +43,18 @@ export function DebtSummaryCards() {
   ]
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
       {cards.map((card) => (
-        <Card key={card.title} className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-muted-foreground">{card.title}</h3>
-            <card.icon className={`h-5 w-5 ${card.color}`} />
+        <Card key={card.title} className="p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-2 sm:mb-4">
+            <h3 className="text-xs sm:text-sm font-medium text-muted-foreground truncate pr-2">{card.title}</h3>
+            <card.icon className={`h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 ${card.color}`} />
           </div>
           
           {isLoading ? (
-            <div className="h-8 w-24 bg-muted animate-pulse rounded" />
+            <div className="h-6 sm:h-8 w-20 sm:w-24 bg-muted animate-pulse rounded" />
           ) : (
-            <p className="text-2xl font-bold">{card.value}</p>
+            <p className="text-lg sm:text-2xl font-bold truncate">{card.value}</p>
           )}
         </Card>
       ))}

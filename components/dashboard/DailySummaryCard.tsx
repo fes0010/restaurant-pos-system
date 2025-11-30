@@ -1,0 +1,125 @@
+'use client'
+
+import { Card } from '@/components/ui/card'
+import { useDailySummary } from '@/hooks/useDashboard'
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Receipt, 
+  RotateCcw, 
+  Wallet,
+  Calculator
+} from 'lucide-react'
+
+function formatCurrency(amount: number | null | undefined) {
+  const value = amount ?? 0
+  return `KSH ${value.toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+}
+
+export function DailySummaryCard() {
+  const { data: summary, isLoading } = useDailySummary()
+
+  const grossSales = summary?.grossSales ?? 0
+  const returns = summary?.returns ?? 0
+  const expenses = summary?.expenses ?? 0
+  const netRevenue = grossSales - returns - expenses
+  const netProfit = (summary?.grossProfit ?? 0) - returns - expenses
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-base font-semibold flex items-center gap-2">
+          <Calculator className="h-4 w-4" />
+          Today's Summary
+        </h3>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-8 bg-muted animate-pulse rounded" />
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Gross Sales */}
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/40 rounded">
+                <Receipt className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Gross Sales</span>
+            </div>
+            <span className="font-bold text-emerald-600 dark:text-emerald-400">
+              {formatCurrency(grossSales)}
+            </span>
+          </div>
+
+          {/* Returns */}
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-orange-100 dark:bg-orange-900/40 rounded">
+                <RotateCcw className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Returns</span>
+            </div>
+            <span className="font-bold text-orange-600 dark:text-orange-400">
+              - {formatCurrency(returns)}
+            </span>
+          </div>
+
+          {/* Expenses */}
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-red-100 dark:bg-red-900/40 rounded">
+                <Wallet className="h-4 w-4 text-red-600 dark:text-red-400" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Expenses</span>
+            </div>
+            <span className="font-bold text-red-600 dark:text-red-400">
+              - {formatCurrency(expenses)}
+            </span>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-dashed my-2" />
+
+          {/* Net Revenue */}
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-blue-100 dark:bg-blue-900/40 rounded">
+                <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <span className="text-sm font-medium text-foreground">Net Revenue</span>
+            </div>
+            <span className={`font-bold ${netRevenue >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
+              {formatCurrency(netRevenue)}
+            </span>
+          </div>
+
+          {/* Net Profit */}
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-purple-100 dark:bg-purple-900/40 rounded">
+                {netProfit >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />
+                )}
+              </div>
+              <span className="text-sm font-medium text-foreground">Net Profit</span>
+            </div>
+            <span className={`font-bold ${netProfit >= 0 ? 'text-purple-600 dark:text-purple-400' : 'text-red-600 dark:text-red-400'}`}>
+              {formatCurrency(netProfit)}
+            </span>
+          </div>
+
+          {/* Transaction count */}
+          <p className="text-xs text-muted-foreground text-center mt-2">
+            {summary?.transactionCount ?? 0} transactions today
+          </p>
+        </div>
+      )}
+    </Card>
+  )
+}

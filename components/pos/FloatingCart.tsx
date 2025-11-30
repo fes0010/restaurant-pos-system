@@ -127,18 +127,18 @@ export function FloatingCart({
           <button
             onClick={onToggle}
             data-tour-id="floating-cart-toggle"
-            className="flex flex-col items-center justify-center bg-primary text-primary-foreground rounded-full shadow-2xl hover:scale-110 transition-transform group w-16 h-16 sm:w-20 sm:h-20"
+            className="flex flex-col items-center justify-center bg-primary text-primary-foreground rounded-full shadow-2xl hover:scale-110 transition-transform group w-16 h-16 sm:w-20 sm:h-20 ring-4 ring-primary/20"
           >
             <div className="relative">
               <ShoppingCart className="h-6 w-6 sm:h-8 sm:w-8" />
               {items.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-background text-foreground text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center border-2 border-primary">
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-md">
                   {items.length}
                 </span>
               )}
             </div>
             {total > 0 && (
-              <span className="text-[10px] sm:text-xs font-semibold mt-1 text-center">
+              <span className="text-[10px] sm:text-xs font-semibold mt-1 text-center drop-shadow-sm">
                 {formatCurrency(total).replace('KSH ', '')}
               </span>
             )}

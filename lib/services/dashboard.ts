@@ -62,29 +62,29 @@ export async function getDashboardKPIs(
     .gte('created_at', previousStart.toISOString())
     .lte('created_at', previousEnd.toISOString())
 
-  // Fetch approved returns for the current period to subtract from revenue
-  let returnsQuery = supabase
+  // Fetch approved returns with their original transaction date
+  const { data: approvedReturns } = await supabase
     .from('returns')
-    .select('total_amount, return_items(quantity, unit_price, product_id, products(cost))')
+    .select('total_amount, return_items(quantity, unit_price, product_id, products(cost)), transaction:transactions(created_at)')
     .eq('tenant_id', tenantId)
     .eq('status', 'approved')
 
-  // Only apply date filters if dates are provided
-  if (startDate) {
-    returnsQuery = returnsQuery.gte('approved_at', currentStart.toISOString())
-  }
-  if (endDate) {
-    returnsQuery = returnsQuery.lte('approved_at', currentEnd.toISOString())
-  }
-
-  const { data: approvedReturns } = await returnsQuery
-
-  // Calculate total returns amount
-  const totalReturnsAmount = approvedReturns?.reduce((sum, r) => sum + Number(r.total_amount), 0) || 0
-
-  // Calculate returns profit loss (the profit we lose from returns)
+  // Calculate total returns amount and profit loss (only for returns whose original transaction is in the date range)
+  let totalReturnsAmount = 0
   let returnsProfitLoss = 0
+  
   approvedReturns?.forEach((returnItem: any) => {
+    // Use the original transaction's created_at date
+    const transactionDate = returnItem.transaction?.created_at
+    if (!transactionDate) return
+    
+    const txDate = new Date(transactionDate)
+    // Only include if the original transaction date is within our date range
+    if (startDate && txDate < currentStart) return
+    if (endDate && txDate > currentEnd) return
+    
+    totalReturnsAmount += Number(returnItem.total_amount)
+    
     const items = returnItem.return_items || []
     items.forEach((item: any) => {
       const cost = item.products?.cost || 0
@@ -166,7 +166,7 @@ export async function getLowStockProducts(tenantId: string): Promise<LowStockPro
 export async function getSalesTrend(
   tenantId: string,
   days: number = 30
-): Promise<{ date: string; revenue: number; sales: number }[]> {
+): Promise<{ date: string; revenue: number; profit: number; sales: number }[]> {
   const supabase = createClient()
   const endDate = new Date()
   const startDate = new Date()
@@ -174,22 +174,70 @@ export async function getSalesTrend(
 
   const { data: transactions } = await supabase
     .from('transactions')
-    .select('created_at, total')
+    .select('created_at, total, transaction_items(quantity, unit_price, product_id, products(cost))')
     .eq('tenant_id', tenantId)
     .eq('status', 'completed')
     .gte('created_at', startDate.toISOString())
     .lte('created_at', endDate.toISOString())
     .order('created_at', { ascending: true })
 
-  // Group by date
-  const grouped = new Map<string, { revenue: number; sales: number }>()
+  // Fetch approved returns with their original transaction date
+  const { data: approvedReturns } = await supabase
+    .from('returns')
+    .select('transaction_id, total_amount, return_items(quantity, unit_price, product_id, products(cost)), transaction:transactions(created_at)')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'approved')
+
+  // Group transactions by date
+  const grouped = new Map<string, { revenue: number; profit: number; sales: number }>()
   
-  transactions?.forEach((t) => {
+  transactions?.forEach((t: any) => {
     const date = new Date(t.created_at).toISOString().split('T')[0]
-    const existing = grouped.get(date) || { revenue: 0, sales: 0 }
+    const existing = grouped.get(date) || { revenue: 0, profit: 0, sales: 0 }
+    
+    // Calculate profit for this transaction
+    let transactionProfit = 0
+    const items = t.transaction_items || []
+    items.forEach((item: any) => {
+      const cost = item.products?.cost || 0
+      const revenue = Number(item.unit_price) * Number(item.quantity)
+      const itemCost = Number(cost) * Number(item.quantity)
+      transactionProfit += revenue - itemCost
+    })
+    
     grouped.set(date, {
       revenue: existing.revenue + Number(t.total),
+      profit: existing.profit + transactionProfit,
       sales: existing.sales + 1,
+    })
+  })
+
+  // Subtract returns from revenue and profit using the ORIGINAL TRANSACTION DATE
+  approvedReturns?.forEach((returnItem: any) => {
+    // Use the original transaction's created_at date, not the return approval date
+    const transactionDate = returnItem.transaction?.created_at
+    if (!transactionDate) return
+    
+    const date = new Date(transactionDate).toISOString().split('T')[0]
+    // Only process if the transaction date is within our date range
+    if (date < startDate.toISOString().split('T')[0] || date > endDate.toISOString().split('T')[0]) return
+    
+    const existing = grouped.get(date) || { revenue: 0, profit: 0, sales: 0 }
+    
+    // Calculate profit loss from return
+    let returnProfitLoss = 0
+    const items = returnItem.return_items || []
+    items.forEach((item: any) => {
+      const cost = item.products?.cost || 0
+      const revenue = Number(item.unit_price) * Number(item.quantity)
+      const itemCost = Number(cost) * Number(item.quantity)
+      returnProfitLoss += revenue - itemCost
+    })
+    
+    grouped.set(date, {
+      revenue: existing.revenue - Number(returnItem.total_amount),
+      profit: existing.profit - returnProfitLoss,
+      sales: existing.sales,
     })
   })
 
@@ -197,4 +245,75 @@ export async function getSalesTrend(
     date,
     ...data,
   }))
+}
+
+
+export interface DailySummary {
+  grossSales: number
+  grossProfit: number
+  returns: number
+  expenses: number
+  transactionCount: number
+}
+
+export async function getDailySummary(tenantId: string): Promise<DailySummary> {
+  const supabase = createClient()
+
+  // Get today's date range
+  const today = new Date()
+  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999)
+
+  // Fetch today's completed transactions
+  const { data: transactions } = await supabase
+    .from('transactions')
+    .select('total, transaction_items(quantity, unit_price, product_id, products(cost))')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'completed')
+    .gte('created_at', startOfDay.toISOString())
+    .lte('created_at', endOfDay.toISOString())
+
+  // Calculate gross sales and profit
+  let grossSales = 0
+  let grossProfit = 0
+  
+  transactions?.forEach((t: any) => {
+    grossSales += Number(t.total)
+    const items = t.transaction_items || []
+    items.forEach((item: any) => {
+      const cost = item.products?.cost || 0
+      const revenue = Number(item.unit_price) * Number(item.quantity)
+      const itemCost = Number(cost) * Number(item.quantity)
+      grossProfit += revenue - itemCost
+    })
+  })
+
+  // Fetch today's approved returns (by approval date for daily tracking)
+  const { data: returns } = await supabase
+    .from('returns')
+    .select('total_amount')
+    .eq('tenant_id', tenantId)
+    .eq('status', 'approved')
+    .gte('approved_at', startOfDay.toISOString())
+    .lte('approved_at', endOfDay.toISOString())
+
+  const totalReturns = returns?.reduce((sum, r) => sum + Number(r.total_amount), 0) || 0
+
+  // Fetch today's expenses
+  const { data: expenses } = await supabase
+    .from('expenses')
+    .select('amount')
+    .eq('tenant_id', tenantId)
+    .gte('expense_date', startOfDay.toISOString().split('T')[0])
+    .lte('expense_date', endOfDay.toISOString().split('T')[0])
+
+  const totalExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0
+
+  return {
+    grossSales,
+    grossProfit,
+    returns: totalReturns,
+    expenses: totalExpenses,
+    transactionCount: transactions?.length || 0,
+  }
 }

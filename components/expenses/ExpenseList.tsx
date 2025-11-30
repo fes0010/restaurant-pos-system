@@ -113,15 +113,62 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="block md:hidden">
+          {isLoading ? (
+            <div className="p-4 space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />
+              ))}
+            </div>
+          ) : data?.expenses.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              No expenses found
+            </div>
+          ) : (
+            <div className="divide-y">
+              {data?.expenses.map((expense) => (
+                <div key={expense.id} className="p-4 flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-muted">
+                        {expense.category?.name || 'Unknown'}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDate(expense.expense_date)}
+                      </span>
+                    </div>
+                    <p className="text-sm truncate text-muted-foreground">
+                      {expense.description || 'No description'}
+                    </p>
+                    <p className="font-semibold text-red-600 dark:text-red-400">
+                      {formatCurrency(expense.amount)}
+                    </p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => onEdit?.(expense)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setDeleteId(expense.id)}>
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Category</TableHead>
+                <TableHead className="whitespace-nowrap">Date</TableHead>
+                <TableHead className="whitespace-nowrap">Category</TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Amount</TableHead>
+                <TableHead className="text-center whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -144,32 +191,24 @@ export function ExpenseList({ onEdit }: ExpenseListProps) {
               ) : (
                 data?.expenses.map((expense) => (
                   <TableRow key={expense.id}>
-                    <TableCell>{formatDate(expense.expense_date)}</TableCell>
+                    <TableCell className="whitespace-nowrap">{formatDate(expense.expense_date)}</TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-muted">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-muted whitespace-nowrap">
                         {expense.category?.name || 'Unknown'}
                       </span>
                     </TableCell>
                     <TableCell className="max-w-xs truncate">
                       {expense.description || '-'}
                     </TableCell>
-                    <TableCell className="text-right font-medium">
+                    <TableCell className="text-right font-medium whitespace-nowrap">
                       {formatCurrency(expense.amount)}
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onEdit?.(expense)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => onEdit?.(expense)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDeleteId(expense.id)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => setDeleteId(expense.id)}>
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </div>

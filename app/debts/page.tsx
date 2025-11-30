@@ -31,24 +31,24 @@ export default function DebtsPage() {
           <DebtSummaryCards />
 
           <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 min-w-0 overflow-hidden">
               <Tabs defaultValue="transactions" className="space-y-4">
-                <TabsList>
-                  <TabsTrigger value="transactions">By Transaction</TabsTrigger>
-                  <TabsTrigger value="customers">By Customer</TabsTrigger>
+                <TabsList className="w-full sm:w-auto flex">
+                  <TabsTrigger value="transactions" className="flex-1 sm:flex-none text-xs sm:text-sm">By Transaction</TabsTrigger>
+                  <TabsTrigger value="customers" className="flex-1 sm:flex-none text-xs sm:text-sm">By Customer</TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="transactions">
+                <TabsContent value="transactions" className="min-w-0">
                   <DebtList onSelectDebt={handleSelectDebt} />
                 </TabsContent>
                 
-                <TabsContent value="customers">
+                <TabsContent value="customers" className="min-w-0">
                   <CustomerDebtView onSelectDebt={handleSelectDebt} />
                 </TabsContent>
               </Tabs>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <DebtAgingBreakdown />
             </div>
           </div>

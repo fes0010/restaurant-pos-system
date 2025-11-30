@@ -9,6 +9,7 @@ import { KPICard } from '@/components/dashboard/KPICard'
 import { SalesTrendChart } from '@/components/dashboard/SalesTrendChart'
 import { LowStockTable } from '@/components/dashboard/LowStockTable'
 import { DebtKPICards } from '@/components/dashboard/DebtKPICards'
+import { DailySummaryCard } from '@/components/dashboard/DailySummaryCard'
 import { DateFilter, DateFilterOption, getDateRange } from '@/components/dashboard/DateFilter'
 import { DollarSign, TrendingUp, ShoppingCart, AlertTriangle } from 'lucide-react'
 
@@ -98,13 +99,17 @@ export default function DashboardPage() {
             <DebtKPICards />
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div data-tour="sales-chart">
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div data-tour="sales-chart" className="lg:col-span-2">
               <SalesTrendChart />
             </div>
-            <div data-tour="low-stock-table">
-              <LowStockTable />
+            <div>
+              <DailySummaryCard />
             </div>
+          </div>
+
+          <div data-tour="low-stock-table">
+            <LowStockTable />
           </div>
         </div>
       </AppLayout>

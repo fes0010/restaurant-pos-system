@@ -5,6 +5,7 @@ import { X, CreditCard, Calendar, User, Receipt } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useDebtTransaction, usePaymentHistory } from '@/hooks/useDebts'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/contexts/AuthContext'
 import { DebtTransaction } from '@/types'
 import { DebtPaymentDialog } from './DebtPaymentDialog'
@@ -14,8 +15,9 @@ interface DebtDetailSheetProps {
   onClose: () => void
 }
 
-function formatCurrency(amount: number) {
-  return `KSH ${amount.toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+function formatCurrency(amount: number | null | undefined) {
+  const value = amount ?? 0
+  return `KSH ${value.toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 }
 
 function formatDate(dateString: string) {
@@ -31,17 +33,29 @@ function formatDate(dateString: string) {
 export function DebtDetailSheet({ debtId, onClose }: DebtDetailSheetProps) {
   const { tenant } = useAuth()
   const currency = tenant?.settings?.currency || 'KES'
+  const queryClient = useQueryClient()
   
-  const { data: debt, isLoading: debtLoading } = useDebtTransaction(debtId || '')
-  const { data: payments, isLoading: paymentsLoading } = usePaymentHistory(debtId || '')
+  const { data: debt, isLoading: debtLoading, refetch: refetchDebt } = useDebtTransaction(debtId || '')
+  const { data: payments, isLoading: paymentsLoading, refetch: refetchPayments } = usePaymentHistory(debtId || '')
   
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
+
+  const handlePaymentSuccess = () => {
+    // Refetch the debt and payment data
+    refetchDebt()
+    refetchPayments()
+    // Also invalidate related queries
+    queryClient.invalidateQueries({ queryKey: ['debts'] })
+    queryClient.invalidateQueries({ queryKey: ['debt-summary'] })
+    queryClient.invalidateQueries({ queryKey: ['debts-by-customer'] })
+  }
 
   if (!debtId) return null
 
   const isLoading = debtLoading || paymentsLoading
-  const totalPaid = payments?.reduce((sum, p) => sum + p.amount, 0) || 0
-  const remainingBalance = (debt?.total || 0) - totalPaid
+  const totalPaid = payments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
+  // Use outstanding_balance from the debt record for accuracy
+  const remainingBalance = debt?.outstanding_balance ?? ((debt?.total || 0) - totalPaid)
 
   return (
     <>
@@ -182,6 +196,7 @@ export function DebtDetailSheet({ debtId, onClose }: DebtDetailSheetProps) {
         debt={debt as DebtTransaction | null}
         open={paymentDialogOpen}
         onOpenChange={setPaymentDialogOpen}
+        onSuccess={handlePaymentSuccess}
       />
     </>
   )
