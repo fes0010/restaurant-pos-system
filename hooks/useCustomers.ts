@@ -69,3 +69,55 @@ export function useCustomerTransactions(customerId: string, limit = 10) {
     refetchOnMount: 'always',
   })
 }
+
+import {
+  updateCustomerCredit,
+  getCustomerCreditStatus,
+  validateCreditSale,
+  UpdateCustomerCreditInput,
+} from '@/lib/services/customers'
+
+export function useCustomerCreditStatus(customerId: string) {
+  return useQuery({
+    queryKey: ['customer-credit-status', customerId],
+    queryFn: () => getCustomerCreditStatus(customerId),
+    enabled: !!customerId,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  })
+}
+
+export function useUpdateCustomerCredit() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: UpdateCustomerCreditInput) => updateCustomerCredit(input),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['customer', data.id] })
+      queryClient.invalidateQueries({ queryKey: ['customer-credit-status', data.id] })
+    },
+  })
+}
+
+export function useValidateCreditSale(customerId: string, saleAmount: number) {
+  return useQuery({
+    queryKey: ['validate-credit-sale', customerId, saleAmount],
+    queryFn: () => validateCreditSale(customerId, saleAmount),
+    enabled: !!customerId && saleAmount > 0,
+    staleTime: 0,
+  })
+}
+
+import { deleteCustomer } from '@/lib/services/customers'
+
+export function useDeleteCustomer() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (customerId: string) => deleteCustomer(customerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+    },
+  })
+}

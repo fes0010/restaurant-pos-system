@@ -18,7 +18,9 @@ import {
   Menu,
   X,
   LogOut,
-  User
+  User,
+  CreditCard,
+  Wallet
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -35,9 +37,12 @@ const navigation: NavItem[] = [
   { name: 'POS', href: '/pos', icon: ShoppingCart, tourPageId: 'pos' },
   { name: 'Inventory', href: '/inventory', icon: Package, adminOnly: true, tourPageId: 'inventory' },
   { name: 'Transactions', href: '/transactions', icon: Receipt, tourPageId: 'transactions' },
+  { name: 'Customers', href: '/customers', icon: Users, adminOnly: true, tourPageId: 'transactions' },
+  { name: 'Debts', href: '/debts', icon: CreditCard, adminOnly: true, tourPageId: 'transactions' },
+  { name: 'Expenses', href: '/expenses', icon: Wallet, adminOnly: true, tourPageId: 'transactions' },
   { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingBag, adminOnly: true, tourPageId: 'purchase-orders' },
   { name: 'Returns', href: '/returns', icon: RotateCcw, tourPageId: 'returns' },
-  { name: 'Users', href: '/users', icon: Users, adminOnly: true, tourPageId: 'users' },
+  { name: 'Users', href: '/users', icon: User, adminOnly: true, tourPageId: 'users' },
 ]
 
 export function AppLayout({ children }: { children: React.ReactNode }) {

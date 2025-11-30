@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CartItem } from './Cart'
 import { Customer } from '@/types'
 import { useCreateTransaction } from '@/hooks/useTransactions'
+import { useCustomerCreditStatus } from '@/hooks/useCustomers'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
@@ -39,8 +40,20 @@ export function CheckoutModal({
   const [amountReceived, setAmountReceived] = useState<number>(total)
   const createTransaction = useCreateTransaction()
 
+  // Fetch real-time credit status when customer is selected
+  const { data: creditStatus, isLoading: creditLoading } = useCustomerCreditStatus(customer?.id || '')
+  
   const change = paymentMethod === 'cash' ? Math.max(0, amountReceived - total) : 0
   const isValidPayment = paymentMethod !== 'cash' || amountReceived >= total
+  const requiresCustomer = paymentMethod === 'debt'
+  const hasRequiredCustomer = !requiresCustomer || customer !== null
+  
+  // Credit validation for debt payments
+  const isCustomerCreditApproved = creditStatus?.customer?.is_credit_approved || false
+  const availableCredit = creditStatus?.available_credit || 0
+  const outstandingDebt = creditStatus?.outstanding_debt || 0
+  const creditLimit = creditStatus?.customer?.credit_limit || 0
+  const canAffordDebt = paymentMethod !== 'debt' || (isCustomerCreditApproved && availableCredit >= total)
 
   const formatCurrency = (value: number) => {
     return `KSH ${value.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -54,6 +67,21 @@ export function CheckoutModal({
 
     if (!user?.id) {
       toast.error('User not authenticated')
+      return
+    }
+
+    if (paymentMethod === 'debt' && !customer) {
+      toast.error('A customer must be selected for debt payments')
+      return
+    }
+
+    if (paymentMethod === 'debt' && customer && !isCustomerCreditApproved) {
+      toast.error('Customer is not approved for credit purchases')
+      return
+    }
+
+    if (paymentMethod === 'debt' && customer && availableCredit < total) {
+      toast.error(`Insufficient credit limit. Available: ${formatCurrency(availableCredit)}`)
       return
     }
 
@@ -153,6 +181,75 @@ export function CheckoutModal({
             </Select>
           </div>
 
+          {/* Debt Payment Info */}
+          {paymentMethod === 'debt' && (
+            <>
+              {!customer ? (
+                <div className="border border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800 rounded-lg p-4">
+                  <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                    A customer must be selected for debt payments
+                  </p>
+                  <p className="text-xs text-red-500 dark:text-red-500 mt-1">
+                    Please go back and select a customer before proceeding with debt payment.
+                  </p>
+                </div>
+              ) : creditLoading ? (
+                <div className="border rounded-lg p-4 bg-muted/50">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm text-muted-foreground">Loading credit information...</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="border border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800 rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Credit Information</p>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Credit Approved</span>
+                      <span className={isCustomerCreditApproved ? 'text-green-600' : 'text-red-600'}>
+                        {isCustomerCreditApproved ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                    {isCustomerCreditApproved && (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Credit Limit</span>
+                          <span>{formatCurrency(creditLimit)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Outstanding Debt</span>
+                          <span className="text-orange-600">{formatCurrency(outstandingDebt)}</span>
+                        </div>
+                        <div className="flex justify-between font-medium pt-1 border-t">
+                          <span>Available Credit</span>
+                          <span className={availableCredit >= total ? 'text-green-600' : 'text-red-600'}>
+                            {formatCurrency(availableCredit)}
+                          </span>
+                        </div>
+                        {availableCredit >= total && (
+                          <div className="flex justify-between text-xs pt-1">
+                            <span className="text-muted-foreground">After this sale</span>
+                            <span className="text-muted-foreground">{formatCurrency(availableCredit - total)}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  {!isCustomerCreditApproved && (
+                    <p className="text-xs text-red-500 mt-2">
+                      This customer is not approved for credit. Please approve them in the Customers page first.
+                    </p>
+                  )}
+                  {isCustomerCreditApproved && availableCredit < total && (
+                    <p className="text-xs text-red-500 mt-2">
+                      This sale exceeds the customer's available credit limit.
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
           {/* Cash Payment Fields */}
           {paymentMethod === 'cash' && (
             <>
@@ -197,7 +294,7 @@ export function CheckoutModal({
             <Button
               className="flex-1"
               onClick={handleCheckout}
-              disabled={!isValidPayment || createTransaction.isPending}
+              disabled={!isValidPayment || !hasRequiredCustomer || !canAffordDebt || createTransaction.isPending}
             >
               {createTransaction.isPending ? (
                 <>

@@ -111,3 +111,208 @@ export async function getCustomerTransactions(customerId: string, limit = 10) {
   if (error) throw error
   return data
 }
+
+// Credit management interfaces
+export interface UpdateCustomerCreditInput {
+  id: string
+  is_credit_approved: boolean
+  credit_limit: number | null
+}
+
+export interface CustomerCreditStatus {
+  customer: Customer
+  outstanding_debt: number
+  available_credit: number
+  pending_transactions: number
+}
+
+export interface CreditValidationResult {
+  allowed: boolean
+  reason?: string
+  available_credit?: number
+  requested_amount?: number
+}
+
+// Update customer credit settings
+export async function updateCustomerCredit(input: UpdateCustomerCreditInput): Promise<Customer> {
+  const supabase = createClient()
+  
+  // Validate: if credit approved, limit must be > 0
+  if (input.is_credit_approved && (!input.credit_limit || input.credit_limit <= 0)) {
+    throw new Error('Credit limit must be greater than zero for approved customers')
+  }
+  
+  // If not approved, clear the limit
+  const creditLimit = input.is_credit_approved ? input.credit_limit : null
+  
+  const { data, error } = await (supabase as any)
+    .from('customers')
+    .update({
+      is_credit_approved: input.is_credit_approved,
+      credit_limit: creditLimit,
+    })
+    .eq('id', input.id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as Customer
+}
+
+// Get customer credit status with outstanding debt calculation
+export async function getCustomerCreditStatus(customerId: string): Promise<CustomerCreditStatus> {
+  const supabase = createClient()
+  
+  // Get customer details
+  const { data: customer, error: customerError } = await (supabase as any)
+    .from('customers')
+    .select('*')
+    .eq('id', customerId)
+    .single()
+
+  if (customerError) throw customerError
+  if (!customer) throw new Error('Customer not found')
+
+  // Get outstanding debt (sum of outstanding_balance for debt_pending transactions)
+  const { data: debts, error: debtsError } = await (supabase as any)
+    .from('transactions')
+    .select('outstanding_balance')
+    .eq('customer_id', customerId)
+    .eq('status', 'debt_pending')
+    .gt('outstanding_balance', 0)
+
+  if (debtsError) throw debtsError
+
+  const outstandingDebt = (debts || []).reduce(
+    (sum: number, t: any) => sum + Number(t.outstanding_balance || 0),
+    0
+  )
+
+  const creditLimit = Number(customer.credit_limit || 0)
+  const availableCredit = customer.is_credit_approved 
+    ? Math.max(0, creditLimit - outstandingDebt)
+    : 0
+
+  return {
+    customer: {
+      ...customer,
+      outstanding_debt: outstandingDebt,
+      available_credit: availableCredit,
+    } as Customer,
+    outstanding_debt: outstandingDebt,
+    available_credit: availableCredit,
+    pending_transactions: (debts || []).length,
+  }
+}
+
+// Validate if a credit sale is allowed for a customer
+export async function validateCreditSale(
+  customerId: string,
+  saleAmount: number
+): Promise<CreditValidationResult> {
+  const supabase = createClient()
+  
+  // Get customer details
+  const { data: customer, error: customerError } = await (supabase as any)
+    .from('customers')
+    .select('*')
+    .eq('id', customerId)
+    .single()
+
+  if (customerError) throw customerError
+  if (!customer) {
+    return {
+      allowed: false,
+      reason: 'Customer not found',
+    }
+  }
+
+  // Check if customer is credit approved
+  if (!customer.is_credit_approved) {
+    return {
+      allowed: false,
+      reason: 'Customer is not approved for credit purchases',
+    }
+  }
+
+  // Get current outstanding debt
+  const { data: debts, error: debtsError } = await (supabase as any)
+    .from('transactions')
+    .select('outstanding_balance')
+    .eq('customer_id', customerId)
+    .eq('status', 'debt_pending')
+    .gt('outstanding_balance', 0)
+
+  if (debtsError) throw debtsError
+
+  const outstandingDebt = (debts || []).reduce(
+    (sum: number, t: any) => sum + Number(t.outstanding_balance || 0),
+    0
+  )
+
+  const creditLimit = Number(customer.credit_limit || 0)
+  const availableCredit = creditLimit - outstandingDebt
+
+  // Check if sale would exceed credit limit
+  if (saleAmount > availableCredit) {
+    return {
+      allowed: false,
+      reason: `Sale amount (${saleAmount}) exceeds available credit (${availableCredit})`,
+      available_credit: availableCredit,
+      requested_amount: saleAmount,
+    }
+  }
+
+  return {
+    allowed: true,
+    available_credit: availableCredit,
+    requested_amount: saleAmount,
+  }
+}
+
+// Calculate available credit for a customer
+export function calculateAvailableCredit(
+  creditLimit: number,
+  outstandingDebt: number
+): number {
+  return Math.max(0, creditLimit - outstandingDebt)
+}
+
+// Validate credit approval settings
+export function validateCreditApproval(
+  isApproved: boolean,
+  creditLimit: number | null
+): { valid: boolean; error?: string } {
+  if (isApproved && (!creditLimit || creditLimit <= 0)) {
+    return {
+      valid: false,
+      error: 'Credit limit must be greater than zero for approved customers',
+    }
+  }
+  return { valid: true }
+}
+
+// Delete a customer
+export async function deleteCustomer(customerId: string): Promise<void> {
+  const supabase = createClient()
+  
+  // Check if customer has any transactions
+  const { data: transactions, error: checkError } = await supabase
+    .from('transactions')
+    .select('id')
+    .eq('customer_id', customerId)
+    .limit(1)
+
+  if (checkError) throw checkError
+  
+  if (transactions && transactions.length > 0) {
+    throw new Error('Cannot delete customer with existing transactions')
+  }
+  
+  const { error } = await supabase
+    .from('customers')
+    .delete()
+    .eq('id', customerId)
+
+  if (error) throw error
+}

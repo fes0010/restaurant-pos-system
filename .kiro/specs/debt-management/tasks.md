@@ -1,0 +1,240 @@
+ee# Implementation Plan
+
+- [x] 1. Database schema and migrations
+  - [x] 1.1 Create migration for customer credit fields
+    - Add `is_credit_approved` boolean and `credit_limit` decimal columns to customers table
+    - Add `outstanding_balance` decimal column to transactions table
+    - _Requirements: 7.1, 7.2_
+  - [x] 1.2 Create migration for debt_payments table
+    - Create table with id, tenant_id, transaction_id, amount, payment_method, payment_date, recorded_by, created_at
+    - Add foreign key constraints and indexes
+    - _Requirements: 2.1, 2.5_
+  - [x] 1.3 Create migration for expense tables
+    - Create expense_categories table with id, tenant_id, name, is_default, created_at
+    - Create expenses table with id, tenant_id, category_id, amount, description, receipt_reference, expense_date, created_by, created_at, updated_at
+    - Create expense_audit table for tracking modifications
+    - Add unique constraint on (tenant_id, name) for categories
+    - _Requirements: 9.1, 9.2, 10.1, 11.4_
+  - [x] 1.4 Create migration for RLS policies
+    - Add tenant isolation policies for debt_payments, expense_categories, expenses, expense_audit tables
+    - _Requirements: 6.1, 11.1_
+  - [x] 1.5 Create migration for default expense categories
+    - Insert default categories (utilities, rent, supplies, salaries, miscellaneous) for existing tenants
+    - Create trigger to add defaults for new tenants
+    - _Requirements: 10.4_
+
+- [x] 2. TypeScript types and interfaces
+  - [x] 2.1 Add debt-related types to types/index.ts
+    - Add DebtPayment interface
+    - Extend Customer interface with credit fields
+    - Add DebtTransaction type with computed fields
+    - _Requirements: 2.5, 7.5_
+  - [x] 2.2 Add expense-related types to types/index.ts
+    - Add ExpenseCategory interface
+    - Add Expense interface
+    - Add ExpenseAudit interface
+    - _Requirements: 9.1, 11.4_
+
+- [x] 3. Debt services implementation
+  - [x] 3.1 Create lib/services/debts.ts with core functions
+    - Implement getDebts() with filtering, sorting, pagination
+    - Implement getDebtSummary() for KPI calculations
+    - Implement getDebtsByCustomer() for customer-grouped view
+    - _Requirements: 1.1, 1.3, 1.4, 1.5, 4.1, 4.2, 4.3, 4.4, 5.1, 5.2_
+  - [ ]* 3.2 Write property tests for debt filtering
+    - **Property 1: Debt list shows only pending debts**
+    - **Property 3: Search filter returns matching results**
+    - **Property 4: Date filter returns debts within range**
+    - **Validates: Requirements 1.1, 1.3, 1.4**
+  - [ ]* 3.3 Write property tests for debt sorting
+    - **Property 5: Sort order is correct**
+    - **Validates: Requirements 1.5**
+  - [x] 3.4 Implement recordDebtPayment() function
+    - Create payment record in debt_payments table
+    - Update transaction outstanding_balance
+    - Update transaction status to 'completed' if fully paid
+    - _Requirements: 2.1, 2.2, 2.3, 2.5_
+  - [ ]* 3.5 Write property tests for payment recording
+    - **Property 6: Payment updates balance correctly**
+    - **Property 7: Overpayment is rejected**
+    - **Validates: Requirements 2.2, 2.3, 2.4**
+  - [x] 3.6 Implement getPaymentHistory() function
+    - Fetch all payments for a transaction ordered by date
+    - Include recorded_by user details
+    - _Requirements: 3.1, 3.2_
+  - [ ]* 3.7 Write property tests for payment history
+    - **Property 8: Payment history is chronologically ordered**
+    - **Property 9: Balance calculation is correct**
+    - **Validates: Requirements 3.1, 3.3**
+  - [ ]* 3.8 Write property tests for debt aggregations
+    - **Property 10: Total outstanding debt is sum of all balances**
+    - **Property 11: Debt aging categorization is correct**
+    - **Property 12: Customer debt grouping is accurate**
+    - **Validates: Requirements 4.1, 4.3, 5.2, 8.1**
+  - [ ]* 3.9 Write property test for serialization
+    - **Property 13: Debt payment serialization round-trip**
+    - **Validates: Requirements 6.2, 6.3**
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 5. Customer credit services
+  - [x] 5.1 Extend lib/services/customers.ts with credit functions
+    - Add updateCustomerCredit() to set credit approval and limit
+    - Add getCustomerCreditStatus() to fetch credit info with outstanding debt
+    - Add validateCreditSale() to check if sale is allowed
+    - _Requirements: 7.1, 7.3, 7.4, 7.5_
+  - [ ]* 5.2 Write property tests for credit validation
+    - **Property 14: Credit approval requires positive limit**
+    - **Property 15: Credit sale blocked for non-approved customers**
+    - **Property 16: Credit limit enforcement**
+    - **Property 17: Available credit calculation**
+    - **Validates: Requirements 7.2, 7.3, 7.4, 7.5**
+
+- [x] 6. Expense services implementation
+  - [x] 6.1 Create lib/services/expenses.ts with category functions
+    - Implement getExpenseCategories()
+    - Implement createExpenseCategory() with uniqueness validation
+    - Implement deleteExpenseCategory() with protection check
+    - _Requirements: 10.1, 10.2, 10.3_
+  - [ ]* 6.2 Write property tests for expense categories
+    - **Property 22: Category name uniqueness**
+    - **Property 23: Category deletion protection**
+    - **Validates: Requirements 10.2, 10.3**
+  - [x] 6.3 Implement expense CRUD functions
+    - Implement getExpenses() with filtering and pagination
+    - Implement createExpense() with validation
+    - Implement updateExpense() with audit trail
+    - Implement getExpenseSummary() for category totals
+    - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 11.4_
+  - [ ]* 6.4 Write property tests for expenses
+    - **Property 19: Expense required fields validation**
+    - **Property 20: Expense category filter returns matching results**
+    - **Property 21: Expense category totals are correct**
+    - **Property 24: Expense serialization round-trip**
+    - **Property 25: Expense edit creates audit trail**
+    - **Validates: Requirements 9.2, 9.4, 9.5, 11.2, 11.3, 11.4**
+
+- [x] 7. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 8. React Query hooks
+  - [x] 8.1 Create hooks/useDebts.ts
+    - Implement useDebts() hook with filters
+    - Implement useDebtSummary() hook
+    - Implement useDebtsByCustomer() hook
+    - Implement useRecordPayment() mutation
+    - Add realtime subscription for debt changes
+    - _Requirements: 1.1, 4.1, 5.1_
+  - [x] 8.2 Create hooks/useExpenses.ts
+    - Implement useExpenses() hook with filters
+    - Implement useExpenseCategories() hook
+    - Implement useCreateExpense() mutation
+    - Implement useUpdateExpense() mutation
+    - Implement useExpenseSummary() hook
+    - _Requirements: 9.1, 9.4, 9.5, 10.1_
+  - [x] 8.3 Extend hooks/useCustomers.ts with credit hooks
+    - Add useUpdateCustomerCredit() mutation
+    - Add useValidateCreditSale() query
+    - _Requirements: 7.1, 7.4_
+
+- [x] 9. Debt management UI components
+  - [x] 9.1 Create components/debts/DebtSummaryCards.tsx
+    - Display total outstanding, customer count, aging breakdown, collected this month
+    - Use Card components consistent with existing dashboard
+    - _Requirements: 4.1, 4.2, 4.3, 4.4_
+  - [x] 9.2 Create components/debts/DebtList.tsx
+    - Display debt transactions in a table with all required columns
+    - Implement search, date range, and sort controls
+    - Add pagination
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+  - [ ]* 9.3 Write property test for debt display
+    - **Property 2: Debt display contains required fields**
+    - **Validates: Requirements 1.2**
+  - [x] 9.4 Create components/debts/DebtPaymentDialog.tsx
+    - Modal form for recording payments
+    - Show current balance, validate payment amount
+    - Payment method selector (cash, mpesa, bank)
+    - _Requirements: 2.1, 2.4, 2.5_
+  - [x] 9.5 Create components/debts/DebtDetailSheet.tsx
+    - Side panel showing transaction details
+    - Payment history list
+    - Original amount, total paid, remaining balance
+    - _Requirements: 3.1, 3.2, 3.3_
+  - [x] 9.6 Create components/debts/CustomerDebtView.tsx
+    - Customer-grouped debt list
+    - Show customer totals and transaction counts
+    - Expandable to show individual debts
+    - _Requirements: 5.1, 5.2, 5.3_
+
+- [x] 10. Debt management page
+  - [x] 10.1 Create app/debts/page.tsx
+    - Integrate DebtSummaryCards, DebtList, CustomerDebtView
+    - Add view toggle (transactions vs customers)
+    - Wire up all filters and actions
+    - _Requirements: 1.1, 4.1, 5.1_
+
+- [x] 11. Expense UI components
+  - [x] 11.1 Create components/expenses/ExpenseList.tsx
+    - Display expenses in a table with date, category, description, amount
+    - Implement date range and category filters
+    - Add pagination
+    - _Requirements: 9.1, 9.4_
+  - [x] 11.2 Create components/expenses/ExpenseForm.tsx
+    - Form for adding/editing expenses
+    - Category dropdown, amount input, date picker
+    - Optional description and receipt reference fields
+    - Validation for required fields
+    - _Requirements: 9.2, 9.3_
+  - [x] 11.3 Create components/expenses/ExpenseSummary.tsx
+    - Display total expenses for selected period
+    - Category breakdown with amounts
+    - _Requirements: 9.5_
+  - [x] 11.4 Create components/expenses/CategoryManager.tsx
+    - List existing categories
+    - Add new category form
+    - Delete button with protection warning
+    - _Requirements: 10.1, 10.2, 10.3_
+
+- [x] 12. Expenses page
+  - [x] 12.1 Create app/expenses/page.tsx
+    - Integrate ExpenseList, ExpenseForm, ExpenseSummary
+    - Add category management section or modal
+    - Wire up all filters and actions
+    - _Requirements: 9.1, 10.1_
+
+- [x] 13. Customer credit UI integration
+  - [x] 13.1 Extend customer form with credit fields
+    - Add credit approval toggle
+    - Add credit limit input (required when approved)
+    - Show current outstanding debt and available credit
+    - _Requirements: 7.1, 7.2, 7.5_
+  - [x] 13.2 Integrate credit check into POS checkout
+    - Check credit approval before allowing debt payment method
+    - Validate against credit limit
+    - Display warning with available credit if blocked
+    - _Requirements: 7.3, 7.4_
+
+- [x] 14. Dashboard KPI integration
+  - [x] 14.1 Create components/dashboard/DebtKPICards.tsx
+    - Total outstanding debt card
+    - Overdue customers count card
+    - Debt collected today card
+    - _Requirements: 8.1, 8.2, 8.3_
+  - [ ]* 14.2 Write property test for overdue count
+    - **Property 18: Overdue customer count is accurate**
+    - **Validates: Requirements 8.2**
+  - [x] 14.3 Integrate DebtKPICards into dashboard page
+    - Add to existing dashboard layout
+    - Make cards clickable to navigate to debt page
+    - _Requirements: 8.4_
+
+- [x] 15. Navigation updates
+  - [x] 15.1 Update AppLayout navigation
+    - Add "Debts" link to sidebar
+    - Add "Expenses" link to sidebar
+    - Use appropriate icons (CreditCard, Receipt)
+    - _Requirements: 1.1, 9.1_
+
+- [x] 16. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

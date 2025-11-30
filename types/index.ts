@@ -51,8 +51,13 @@ export interface Customer {
   phone?: string;
   email?: string;
   total_purchases: number;
+  is_credit_approved: boolean;
+  credit_limit: number | null;
   created_at: string;
   updated_at: string;
+  // Computed fields (from service)
+  outstanding_debt?: number;
+  available_credit?: number;
 }
 
 export interface Transaction {
@@ -66,6 +71,7 @@ export interface Transaction {
   discount_value: number;
   discount_amount: number;
   total: number;
+  outstanding_balance: number;
   payment_method: 'cash' | 'mpesa' | 'bank' | 'debt';
   status: 'completed' | 'debt_pending';
   created_at: string;
@@ -73,6 +79,49 @@ export interface Transaction {
   served_by: string;
   served_by_user?: User;
   items: TransactionItem[];
+  payments?: DebtPayment[];
+}
+
+// Debt payment record
+export interface DebtPayment {
+  id: string;
+  tenant_id: string;
+  transaction_id: string;
+  amount: number;
+  payment_method: 'cash' | 'mpesa' | 'bank';
+  payment_date: string;
+  recorded_by: string;
+  recorded_by_user?: User;
+  created_at: string;
+}
+
+// Debt transaction with computed fields for display
+export interface DebtTransaction extends Transaction {
+  days_overdue: number;
+  total_paid: number;
+}
+
+// Debt summary statistics
+export interface DebtSummary {
+  total_outstanding: number;
+  customer_count: number;
+  aging: {
+    current: number;      // 0-30 days
+    overdue_30: number;   // 31-60 days
+    overdue_60: number;   // 61-90 days
+    overdue_90: number;   // 90+ days
+  };
+  collected_this_month: number;
+  collected_today: number;
+}
+
+// Customer debt summary for grouped view
+export interface CustomerDebtSummary {
+  customer: Customer;
+  total_outstanding: number;
+  transaction_count: number;
+  oldest_debt_date: string;
+  debts: DebtTransaction[];
 }
 
 export interface TransactionItem {
@@ -158,6 +207,47 @@ export interface StockHistory {
   created_by: string;
   user?: User;
   product?: Product;
+}
+
+// Expense category
+export interface ExpenseCategory {
+  id: string;
+  tenant_id: string;
+  name: string;
+  is_default: boolean;
+  created_at: string;
+}
+
+// Expense record
+export interface Expense {
+  id: string;
+  tenant_id: string;
+  category_id: string;
+  category?: ExpenseCategory;
+  amount: number;
+  description?: string;
+  receipt_reference?: string;
+  expense_date: string;
+  created_by: string;
+  created_by_user?: User;
+  created_at: string;
+  updated_at: string;
+}
+
+// Expense audit trail
+export interface ExpenseAudit {
+  id: string;
+  expense_id: string;
+  changed_by: string;
+  changed_by_user?: User;
+  changes: Record<string, { old: unknown; new: unknown }>;
+  created_at: string;
+}
+
+// Expense summary by category
+export interface ExpenseSummary {
+  total: number;
+  by_category: { category: ExpenseCategory; amount: number }[];
 }
 
 // Export tour types
