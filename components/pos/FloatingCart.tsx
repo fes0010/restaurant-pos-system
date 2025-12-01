@@ -5,13 +5,22 @@ import { Product } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Minus, Plus, Trash2, ShoppingCart, ChevronLeft } from 'lucide-react'
+import { Minus, Plus, Trash2, ShoppingCart, ChevronLeft, ParkingCircle, Play, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface CartItem {
   product: Product
   quantity: number
   customPrice?: number // Optional custom price override
+}
+
+export interface ParkedCart {
+  id: string
+  name: string
+  items: CartItem[]
+  discount: number
+  customer: any
+  parkedAt: string
 }
 
 interface FloatingCartProps {
@@ -25,6 +34,10 @@ interface FloatingCartProps {
   onUpdateDiscount: (discount: number) => void
   onClearCart: () => void
   onCheckout: () => void
+  parkedCarts?: ParkedCart[]
+  onParkCart?: () => void
+  onResumeCart?: (cart: ParkedCart) => void
+  onDeleteParkedCart?: (cartId: string) => void
 }
 
 export function FloatingCart({
@@ -38,6 +51,10 @@ export function FloatingCart({
   onUpdateDiscount,
   onClearCart,
   onCheckout,
+  parkedCarts = [],
+  onParkCart,
+  onResumeCart,
+  onDeleteParkedCart,
 }: FloatingCartProps) {
   const cartRef = useRef<HTMLDivElement>(null)
 
@@ -159,6 +176,11 @@ export function FloatingCart({
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
+                  {items.length > 0 && onParkCart && (
+                    <Button variant="outline" size="sm" onClick={onParkCart} title="Park cart">
+                      <ParkingCircle className="h-4 w-4" />
+                    </Button>
+                  )}
                   {items.length > 0 && (
                     <Button variant="ghost" size="sm" onClick={onClearCart}>
                       Clear
@@ -174,6 +196,43 @@ export function FloatingCart({
                 </div>
               </div>
             </div>
+
+            {/* Parked Carts */}
+            {parkedCarts.length > 0 && onResumeCart && (
+              <div className="border-b p-3 bg-muted/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <ParkingCircle className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Parked Carts ({parkedCarts.length})</span>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {parkedCarts.map((cart) => (
+                    <div
+                      key={cart.id}
+                      className="flex items-center gap-1 bg-background border rounded-lg px-2 py-1 min-w-fit"
+                    >
+                      <button
+                        onClick={() => onResumeCart(cart)}
+                        className="flex items-center gap-1 text-sm hover:text-primary"
+                      >
+                        <Play className="h-3 w-3" />
+                        <span className="max-w-[100px] truncate">{cart.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({cart.items.length})
+                        </span>
+                      </button>
+                      {onDeleteParkedCart && (
+                        <button
+                          onClick={() => onDeleteParkedCart(cart.id)}
+                          className="text-muted-foreground hover:text-destructive ml-1"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Cart Items */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">

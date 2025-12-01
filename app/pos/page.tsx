@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { ProductCardGrid } from '@/components/pos/ProductCardGrid'
@@ -19,6 +19,16 @@ import { createImmediateSale } from '@/lib/services/transactions'
 const CART_STORAGE_KEY = 'pos-cart'
 const DISCOUNT_STORAGE_KEY = 'pos-discount'
 const CUSTOMER_STORAGE_KEY = 'pos-customer'
+const PARKED_CARTS_KEY = 'pos-parked-carts'
+
+interface ParkedCart {
+  id: string
+  name: string
+  items: CartItem[]
+  discount: number
+  customer: Customer | null
+  parkedAt: string
+}
 
 export default function POSPage() {
   const { user } = useAuth()
@@ -29,7 +39,8 @@ export default function POSPage() {
   const [completedTransactionId, setCompletedTransactionId] = useState<string | null>(null)
   const [isReceiptOpen, setIsReceiptOpen] = useState(false)
   const [isCartExpanded, setIsCartExpanded] = useState(false)
-  const autoCollapseTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [parkedCarts, setParkedCarts] = useState<ParkedCart[]>([])
+  const [isParkedCartsOpen, setIsParkedCartsOpen] = useState(false)
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -56,6 +67,16 @@ export default function POSPage() {
         console.error('Failed to load customer from localStorage', error)
       }
     }
+
+    // Load parked carts
+    const savedParkedCarts = localStorage.getItem(PARKED_CARTS_KEY)
+    if (savedParkedCarts) {
+      try {
+        setParkedCarts(JSON.parse(savedParkedCarts))
+      } catch (error) {
+        console.error('Failed to load parked carts from localStorage', error)
+      }
+    }
   }, [])
 
   // Save cart to localStorage whenever it changes
@@ -76,6 +97,11 @@ export default function POSPage() {
       localStorage.removeItem(CUSTOMER_STORAGE_KEY)
     }
   }, [selectedCustomer])
+
+  // Save parked carts to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(PARKED_CARTS_KEY, JSON.stringify(parkedCarts))
+  }, [parkedCarts])
 
   const handleAddToCart = (product: Product) => {
     if (Number(product.stock_quantity) <= 0) {
@@ -104,19 +130,7 @@ export default function POSPage() {
       }
     })
 
-    // Show cart briefly and auto-collapse after 2 seconds
-    setIsCartExpanded(true)
     toast.success(`${product.name} added to cart`)
-    
-    // Clear existing timer
-    if (autoCollapseTimerRef.current) {
-      clearTimeout(autoCollapseTimerRef.current)
-    }
-    
-    // Set new timer to auto-collapse
-    autoCollapseTimerRef.current = setTimeout(() => {
-      setIsCartExpanded(false)
-    }, 2000)
   }
 
   const handleImmediateSale = async (product: Product, customPrice: number) => {
@@ -148,14 +162,60 @@ export default function POSPage() {
     }
   }
 
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (autoCollapseTimerRef.current) {
-        clearTimeout(autoCollapseTimerRef.current)
-      }
+  // Park current cart
+  const handleParkCart = () => {
+    if (cartItems.length === 0) {
+      toast.error('Cart is empty')
+      return
     }
-  }, [])
+
+    const cartName = selectedCustomer?.name || `Cart ${parkedCarts.length + 1}`
+    const newParkedCart: ParkedCart = {
+      id: Date.now().toString(),
+      name: cartName,
+      items: cartItems,
+      discount,
+      customer: selectedCustomer,
+      parkedAt: new Date().toISOString(),
+    }
+
+    setParkedCarts((prev) => [...prev, newParkedCart])
+    setCartItems([])
+    setDiscount(0)
+    setSelectedCustomer(null)
+    toast.success(`Cart parked as "${cartName}"`)
+  }
+
+  // Resume a parked cart
+  const handleResumeCart = (parkedCart: ParkedCart) => {
+    // If current cart has items, park it first
+    if (cartItems.length > 0) {
+      const currentCartName = selectedCustomer?.name || `Cart ${parkedCarts.length + 1}`
+      const currentParkedCart: ParkedCart = {
+        id: Date.now().toString(),
+        name: currentCartName,
+        items: cartItems,
+        discount,
+        customer: selectedCustomer,
+        parkedAt: new Date().toISOString(),
+      }
+      setParkedCarts((prev) => [...prev.filter(c => c.id !== parkedCart.id), currentParkedCart])
+    } else {
+      setParkedCarts((prev) => prev.filter(c => c.id !== parkedCart.id))
+    }
+
+    setCartItems(parkedCart.items)
+    setDiscount(parkedCart.discount)
+    setSelectedCustomer(parkedCart.customer)
+    setIsParkedCartsOpen(false)
+    toast.success(`Resumed cart "${parkedCart.name}"`)
+  }
+
+  // Delete a parked cart
+  const handleDeleteParkedCart = (cartId: string) => {
+    setParkedCarts((prev) => prev.filter(c => c.id !== cartId))
+    toast.success('Parked cart deleted')
+  }
 
   const handleUpdateQuantity = (productId: string, quantity: number) => {
     setCartItems((prev) =>
@@ -208,11 +268,6 @@ export default function POSPage() {
 
   const handleToggleCart = () => {
     setIsCartExpanded((prev) => !prev)
-    // Clear auto-collapse timer when manually toggling
-    if (autoCollapseTimerRef.current) {
-      clearTimeout(autoCollapseTimerRef.current)
-      autoCollapseTimerRef.current = null
-    }
   }
 
   return (
@@ -255,6 +310,10 @@ export default function POSPage() {
           onUpdateDiscount={setDiscount}
           onClearCart={handleClearCart}
           onCheckout={handleCheckout}
+          parkedCarts={parkedCarts}
+          onParkCart={handleParkCart}
+          onResumeCart={handleResumeCart}
+          onDeleteParkedCart={handleDeleteParkedCart}
         />
 
         {/* Checkout Modal */}
