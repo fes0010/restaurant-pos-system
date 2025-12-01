@@ -284,10 +284,13 @@ export interface DailySummary {
 export async function getDailySummary(tenantId: string): Promise<DailySummary> {
   const supabase = createClient()
 
-  // Get today's date range
+  // Get today's date range in local timezone
   const today = new Date()
   const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999)
+  
+  // Format today's date as YYYY-MM-DD for expense_date comparison (local timezone)
+  const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
   // Fetch today's completed transactions
   const { data: transactions } = await supabase
@@ -336,13 +339,12 @@ export async function getDailySummary(tenantId: string): Promise<DailySummary> {
     })
   })
 
-  // Fetch today's expenses
+  // Fetch today's expenses using local date string
   const { data: expenses } = await supabase
     .from('expenses')
     .select('amount')
     .eq('tenant_id', tenantId)
-    .gte('expense_date', startOfDay.toISOString().split('T')[0])
-    .lte('expense_date', endOfDay.toISOString().split('T')[0])
+    .eq('expense_date', todayDateStr)
 
   const totalExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0
 
