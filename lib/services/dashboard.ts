@@ -189,21 +189,42 @@ export async function getLowStockProducts(tenantId: string): Promise<LowStockPro
 
 export async function getSalesTrend(
   tenantId: string,
-  days: number = 30
+  days: number = 30,
+  filterStartDate?: Date,
+  filterEndDate?: Date
 ): Promise<{ date: string; revenue: number; profit: number; sales: number }[]> {
   const supabase = createClient()
-  const endDate = new Date()
-  const startDate = new Date()
-  startDate.setDate(startDate.getDate() - days)
+  
+  // If both dates are undefined (All Time), fetch all transactions
+  // Otherwise use provided dates or default to last N days
+  const isAllTime = filterStartDate === undefined && filterEndDate === undefined
+  
+  let startDate: Date | undefined
+  let endDate: Date | undefined
+  
+  if (!isAllTime) {
+    endDate = filterEndDate || new Date()
+    startDate = filterStartDate || (() => {
+      const d = new Date()
+      d.setDate(d.getDate() - days)
+      return d
+    })()
+  }
 
-  const { data: transactions } = await supabase
+  let transactionQuery = supabase
     .from('transactions')
     .select('created_at, total, transaction_items(quantity, unit_price, product_id, products(cost))')
     .eq('tenant_id', tenantId)
     .eq('status', 'completed')
-    .gte('created_at', startDate.toISOString())
-    .lte('created_at', endDate.toISOString())
-    .order('created_at', { ascending: true })
+  
+  if (startDate) {
+    transactionQuery = transactionQuery.gte('created_at', startDate.toISOString())
+  }
+  if (endDate) {
+    transactionQuery = transactionQuery.lte('created_at', endDate.toISOString())
+  }
+  
+  const { data: transactions } = await transactionQuery.order('created_at', { ascending: true })
 
   // Fetch approved returns with their original transaction date
   const { data: approvedReturns } = await supabase
@@ -243,8 +264,9 @@ export async function getSalesTrend(
     if (!transactionDate) return
     
     const date = new Date(transactionDate).toISOString().split('T')[0]
-    // Only process if the transaction date is within our date range
-    if (date < startDate.toISOString().split('T')[0] || date > endDate.toISOString().split('T')[0]) return
+    // Only process if the transaction date is within our date range (skip check for All Time)
+    if (startDate && date < startDate.toISOString().split('T')[0]) return
+    if (endDate && date > endDate.toISOString().split('T')[0]) return
     
     const existing = grouped.get(date) || { revenue: 0, profit: 0, sales: 0 }
     

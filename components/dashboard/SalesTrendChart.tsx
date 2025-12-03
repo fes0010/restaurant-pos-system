@@ -23,8 +23,15 @@ import { BarChart3, LineChart as LineChartIcon, TrendingUp, TrendingDown, Dollar
 type ChartType = 'bar' | 'composed'
 type MetricType = 'revenue' | 'profit'
 
-export function SalesTrendChart() {
-  const { data: salesData, isLoading } = useSalesTrend(30)
+interface SalesTrendChartProps {
+  startDate?: Date
+  endDate?: Date
+  kpiRevenue?: number
+  kpiProfit?: number
+}
+
+export function SalesTrendChart({ startDate, endDate, kpiRevenue, kpiProfit }: SalesTrendChartProps) {
+  const { data: salesData, isLoading } = useSalesTrend(30, startDate, endDate)
   const [chartType, setChartType] = useState<ChartType>('bar')
   const [metricType, setMetricType] = useState<MetricType>('revenue')
   const [isDark, setIsDark] = useState(false)
@@ -70,7 +77,7 @@ export function SalesTrendChart() {
     const change = prevValue > 0 ? ((item[metricType] - prevValue) / prevValue) * 100 : 0
     return {
       date: format(new Date(item.date), 'MMM dd'),
-      shortDate: format(new Date(item.date), 'dd'),
+      shortDate: format(new Date(item.date), 'MMM dd'),
       revenue: item.revenue,
       profit: item.profit || 0,
       sales: item.sales,
@@ -143,7 +150,11 @@ export function SalesTrendChart() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h2 className="text-lg font-semibold">Sales Overview</h2>
-          <p className="text-sm text-muted-foreground">Last 30 days performance</p>
+          <p className="text-sm text-muted-foreground">
+            {startDate && endDate 
+              ? `${format(startDate, 'MMM dd, yyyy')} - ${format(endDate, 'MMM dd, yyyy')}`
+              : 'All time performance'}
+          </p>
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
@@ -206,13 +217,13 @@ export function SalesTrendChart() {
         <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-lg">
           <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Revenue</p>
           <p className="text-sm sm:text-lg font-bold text-emerald-600 dark:text-emerald-400 truncate">
-            KSH {totalRevenue.toLocaleString()}
+            KSH {(kpiRevenue ?? totalRevenue).toLocaleString()}
           </p>
         </div>
         <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-lg">
           <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Profit</p>
-          <p className={`text-sm sm:text-lg font-bold truncate ${totalProfit >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
-            KSH {totalProfit.toLocaleString()}
+          <p className={`text-sm sm:text-lg font-bold truncate ${(kpiProfit ?? totalProfit) >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
+            KSH {(kpiProfit ?? totalProfit).toLocaleString()}
           </p>
         </div>
         <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-lg">

@@ -101,7 +101,12 @@ export default function DashboardPage() {
 
           <div className="grid gap-6 lg:grid-cols-3">
             <div data-tour="sales-chart" className="lg:col-span-2">
-              <SalesTrendChart />
+              <SalesTrendChart 
+                startDate={dateRange.startDate} 
+                endDate={dateRange.endDate}
+                kpiRevenue={kpis?.totalRevenue}
+                kpiProfit={kpis?.totalProfit}
+              />
             </div>
             <div>
               <DailySummaryCard />

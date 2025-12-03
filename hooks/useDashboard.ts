@@ -27,12 +27,12 @@ export function useLowStockProducts() {
   })
 }
 
-export function useSalesTrend(days: number = 30) {
+export function useSalesTrend(days: number = 30, startDate?: Date, endDate?: Date) {
   const { tenant } = useAuth()
 
   return useQuery({
-    queryKey: ['sales-trend', tenant?.id, days],
-    queryFn: () => getSalesTrend(tenant!.id, days),
+    queryKey: ['sales-trend', tenant?.id, days, startDate, endDate],
+    queryFn: () => getSalesTrend(tenant!.id, days, startDate, endDate),
     enabled: !!tenant,
     staleTime: 0,
     refetchOnMount: 'always',
