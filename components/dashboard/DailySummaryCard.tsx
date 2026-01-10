@@ -23,9 +23,9 @@ export function DailySummaryCard() {
   const returns = summary?.returns ?? 0
   const returnsProfitLoss = summary?.returnsProfitLoss ?? 0
   const expenses = summary?.expenses ?? 0
-  const netRevenue = grossSales - returns - expenses
+  const dayRevenue = grossSales - returns - expenses
   // For profit, subtract profit loss from returns (not full return amount) since we recover the cost
-  const netProfit = (summary?.grossProfit ?? 0) - returnsProfitLoss - expenses
+  const dayProfit = (summary?.grossProfit ?? 0) - returnsProfitLoss
 
   return (
     <Card className="p-5">
@@ -86,33 +86,33 @@ export function DailySummaryCard() {
           {/* Divider */}
           <div className="border-t border-dashed my-2" />
 
-          {/* Net Revenue */}
+          {/* Day Revenue */}
           <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-blue-100 dark:bg-blue-900/40 rounded">
                 <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               </div>
-              <span className="text-sm font-medium text-foreground">Net Revenue</span>
+              <span className="text-sm font-medium text-foreground">Day Revenue</span>
             </div>
-            <span className={`font-bold ${netRevenue >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
-              {formatCurrency(netRevenue)}
+            <span className={`font-bold ${dayRevenue >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
+              {formatCurrency(dayRevenue)}
             </span>
           </div>
 
-          {/* Net Profit */}
+          {/* Day Profit */}
           <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-purple-100 dark:bg-purple-900/40 rounded">
-                {netProfit >= 0 ? (
+                {dayProfit >= 0 ? (
                   <TrendingUp className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 ) : (
                   <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />
                 )}
               </div>
-              <span className="text-sm font-medium text-foreground">Net Profit</span>
+              <span className="text-sm font-medium text-foreground">Day Profit</span>
             </div>
-            <span className={`font-bold ${netProfit >= 0 ? 'text-purple-600 dark:text-purple-400' : 'text-red-600 dark:text-red-400'}`}>
-              {formatCurrency(netProfit)}
+            <span className={`font-bold ${dayProfit >= 0 ? 'text-purple-600 dark:text-purple-400' : 'text-red-600 dark:text-red-400'}`}>
+              {formatCurrency(dayProfit)}
             </span>
           </div>
 

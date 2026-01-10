@@ -131,7 +131,7 @@ export async function getDashboardKPIs(
       grossProfit += revenue - itemCost
     })
   })
-  const totalProfit = grossProfit - returnsProfitLoss - totalExpenses
+  const totalProfit = grossProfit - returnsProfitLoss
 
   // Calculate previous period metrics for comparison
   const previousRevenue = previousTransactions?.reduce((sum, t) => sum + Number(t.total), 0) || 0
